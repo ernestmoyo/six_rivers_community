@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Package,
+  Shield,
 } from "lucide-react";
 import {
   demoKPIs,
@@ -44,6 +45,7 @@ const iconMap: Record<string, React.ElementType> = {
   CheckCircle,
   TreePine,
   Users,
+  Shield,
 };
 
 export default function DashboardPage() {
@@ -62,7 +64,7 @@ export default function DashboardPage() {
             value={demoKPIs.totalFarmers.toLocaleString()}
             icon={Users}
             trend="up"
-            trendValue="+24 this month"
+            trendValue="+12 this month"
             iconClassName="bg-blue-100 text-blue-600"
           />
           <KPICard
@@ -70,7 +72,7 @@ export default function DashboardPage() {
             value={demoKPIs.totalSeedlingsDistributed.toLocaleString()}
             icon={Sprout}
             trend="up"
-            trendValue="+1,150 this month"
+            trendValue="+180 this month"
             iconClassName="bg-green-100 text-green-600"
           />
           <KPICard
@@ -78,7 +80,7 @@ export default function DashboardPage() {
             value={`${demoKPIs.averageSurvivalRate}%`}
             icon={Heart}
             trend="down"
-            trendValue="-2.1% vs last month"
+            trendValue="Dry season losses impacting rate"
             iconClassName="bg-rose-100 text-rose-600"
           />
           <KPICard
@@ -91,27 +93,60 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Second row KPIs */}
+        {/* Second row KPIs — Human-Wildlife Coexistence */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KPICard
+            title="Active Chilli Fences"
+            value={demoKPIs.activeChilliFences}
+            icon={Shield}
+            trend="up"
+            trendValue="Elephant deterrence"
+            iconClassName="bg-red-100 text-red-600"
+          />
+          <KPICard
+            title="Deterrence Success"
+            value={`${demoKPIs.elephantDeterrenceSuccessRate}%`}
+            icon={Shield}
+            subtitle="Elephants turned away by chilli"
+            iconClassName="bg-green-100 text-green-600"
+          />
+          <KPICard
+            title="Wildlife Incidents"
+            value={demoKPIs.wildlifeIncidentsThisMonth}
+            icon={AlertTriangle}
+            trend="down"
+            trendValue="Mostly elephant crop raids"
+            iconClassName="bg-orange-100 text-orange-600"
+          />
+          <KPICard
+            title="Shambachungu Groups"
+            value={demoKPIs.shambachunguGroups}
+            icon={Users}
+            subtitle="Group wildlife-friendly farming"
+            iconClassName="bg-blue-100 text-blue-600"
+          />
+        </div>
+
+        {/* Third row KPIs */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
             title="Agroforestry Area"
             value={`${demoKPIs.totalAgroforestryHectares} ha`}
             icon={TreePine}
             trend="up"
-            trendValue="+8.5 ha this quarter"
+            trendValue="+3.2 ha this quarter"
           />
           <KPICard
             title="Active Crop Cycles"
             value={demoKPIs.activeCropCycles}
             icon={Wheat}
-            subtitle="3 expected harvests this week"
+            subtitle="Mostly short-cycle horticulture"
           />
           <KPICard
             title="Cattle Incidents"
             value={demoKPIs.cattleIncidentsThisMonth}
             icon={Beef}
-            trend="up"
-            trendValue="+3 vs last month"
+            subtitle="Mbarali District"
             iconClassName="bg-red-100 text-red-600"
           />
           <KPICard
@@ -119,7 +154,7 @@ export default function DashboardPage() {
             value={demoKPIs.fieldVisitsThisMonth}
             icon={ClipboardList}
             trend="up"
-            trendValue="+12 vs last month"
+            trendValue="+5 vs last month"
             iconClassName="bg-purple-100 text-purple-600"
           />
         </div>

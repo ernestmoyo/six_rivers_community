@@ -37,7 +37,7 @@ export default function VillagesPage() {
 
   return (
     <div className="flex flex-col">
-      <Header title="Villages" subtitle="Operational villages across Psolo Sector & Usangu Basin" />
+      <Header title="Villages" subtitle="Operational villages across Ifakara Town Council & Mbarali District Council" />
 
       <div className="flex flex-col gap-6 p-6">
         {/* Summary Cards */}
@@ -98,17 +98,17 @@ export default function VillagesPage() {
             </Button>
             <Button
               size="sm"
-              variant={sectorFilter === "psolo" ? "default" : "secondary"}
-              onClick={() => setSectorFilter("psolo")}
+              variant={sectorFilter === "ifakara" ? "default" : "secondary"}
+              onClick={() => setSectorFilter("ifakara")}
             >
-              Psolo Sector
+              Ifakara TC
             </Button>
             <Button
               size="sm"
-              variant={sectorFilter === "usangu_basin" ? "default" : "secondary"}
-              onClick={() => setSectorFilter("usangu_basin")}
+              variant={sectorFilter === "mbarali" ? "default" : "secondary"}
+              onClick={() => setSectorFilter("mbarali")}
             >
-              Usangu Basin
+              Mbarali DC
             </Button>
           </div>
         </div>
@@ -146,12 +146,12 @@ export default function VillagesPage() {
                       <Badge
                         variant="secondary"
                         className={
-                          village.sector === "psolo"
+                          village.sector === "ifakara"
                             ? "bg-emerald-100 text-emerald-800"
                             : "bg-amber-100 text-amber-800"
                         }
                       >
-                        {village.sector === "psolo" ? "Psolo" : "Usangu"}
+                        {village.sector === "ifakara" ? "Ifakara TC" : "Mbarali DC"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">{village.population.toLocaleString()}</TableCell>

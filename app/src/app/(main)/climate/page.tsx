@@ -26,12 +26,12 @@ import {
 } from "recharts";
 
 const monthlyRainfall = [
-  { month: "Oct", psolo: 45, usangu: 32 },
-  { month: "Nov", psolo: 120, usangu: 85 },
-  { month: "Dec", psolo: 180, usangu: 140 },
-  { month: "Jan", psolo: 210, usangu: 95 },
-  { month: "Feb", psolo: 165, usangu: 60 },
-  { month: "Mar", psolo: 95, usangu: 28 },
+  { month: "Oct", ifakara: 45, mbarali: 32 },
+  { month: "Nov", ifakara: 120, mbarali: 85 },
+  { month: "Dec", ifakara: 180, mbarali: 140 },
+  { month: "Jan", ifakara: 210, mbarali: 95 },
+  { month: "Feb", ifakara: 165, mbarali: 60 },
+  { month: "Mar", ifakara: 95, mbarali: 28 },
 ];
 
 const temperatureTrend = [
@@ -149,7 +149,7 @@ export default function ClimatePage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold">
-                Monthly Rainfall: Psolo vs Usangu
+                Monthly Rainfall: Ifakara TC vs Mbarali DC
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -160,8 +160,8 @@ export default function ClimatePage() {
                     <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="psolo" name="Psolo Sector" fill="hsl(142, 71%, 55%)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="usangu" name="Usangu Basin" fill="hsl(36, 100%, 55%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="ifakara" name="Ifakara TC" fill="hsl(142, 71%, 55%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="mbarali" name="Mbarali DC" fill="hsl(36, 100%, 55%)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -204,6 +204,32 @@ export default function ClimatePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Seasonal Planting Guidance */}
+        <Card className="border-amber-200 bg-amber-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Sun className="h-4 w-4 text-amber-600" />
+              Seasonal Planting Guidance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-2 text-sm">
+              <div className="flex items-start gap-2">
+                <Droplets className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                <p><span className="font-medium">Recommended planting windows:</span> April–May (long rains) and November–December (short rains)</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                <p><span className="font-medium">Avoid dry season planting (June–September)</span> — seedlings planted during 2025 dry season experienced significant mortality, especially cocoa in Mbarali District</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <Cloud className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                <p><span className="font-medium">Current status:</span> Nursery seedlings being held for April rains before distribution. Replanting of failed dry-season batches planned.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

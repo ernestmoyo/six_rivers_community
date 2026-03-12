@@ -34,9 +34,9 @@ import {
 } from "recharts";
 
 const quarterlyData = [
-  { quarter: "Q3 2025", farmers: 180, seedlings: 4200, survival: 72, visits: 85 },
-  { quarter: "Q4 2025", farmers: 280, seedlings: 9800, survival: 70, visits: 142 },
-  { quarter: "Q1 2026", farmers: 342, seedlings: 18750, survival: 68.4, visits: 198 },
+  { quarter: "Q3 2025", farmers: 35, seedlings: 400, survival: 65, visits: 18 },
+  { quarter: "Q4 2025", farmers: 85, seedlings: 1400, survival: 62, visits: 42 },
+  { quarter: "Q1 2026", farmers: 145, seedlings: 2400, survival: 58, visits: 65 },
 ];
 
 export default function ImpactPage() {
@@ -73,7 +73,7 @@ export default function ImpactPage() {
             value={demoKPIs.totalFarmers}
             icon={Users}
             trend="up"
-            trendValue="+62 this quarter"
+            trendValue="+60 this quarter"
             iconClassName="bg-blue-100 text-blue-600"
           />
           <KPICard
@@ -81,7 +81,7 @@ export default function ImpactPage() {
             value={demoKPIs.totalSeedlingsDistributed.toLocaleString()}
             icon={Sprout}
             trend="up"
-            trendValue="+8,950 this quarter"
+            trendValue="+1,000 this quarter"
             iconClassName="bg-green-100 text-green-600"
           />
           <KPICard
@@ -89,7 +89,7 @@ export default function ImpactPage() {
             value={`${demoKPIs.averageSurvivalRate}%`}
             icon={Heart}
             trend="down"
-            trendValue="-1.6% vs Q4"
+            trendValue="-4% vs Q4 (dry season losses)"
             iconClassName="bg-rose-100 text-rose-600"
           />
           <KPICard
@@ -97,7 +97,7 @@ export default function ImpactPage() {
             value={`${demoKPIs.totalAgroforestryHectares} ha`}
             icon={TreePine}
             trend="up"
-            trendValue="+32.5 ha this quarter"
+            trendValue="+4.5 ha this quarter"
           />
         </div>
 
@@ -176,34 +176,36 @@ export default function ImpactPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="font-medium">Farmers Engaged</p>
-                  <p className="text-2xl font-bold text-primary">342</p>
-                  <p className="text-xs text-muted-foreground">+22% vs Q4 2025</p>
+                  <p className="text-2xl font-bold text-primary">145</p>
+                  <p className="text-xs text-muted-foreground">+71% vs Q4 2025</p>
                 </div>
                 <div>
                   <p className="font-medium">Seedlings Distributed</p>
-                  <p className="text-2xl font-bold text-primary">18,750</p>
-                  <p className="text-xs text-muted-foreground">+91% vs Q4 2025</p>
+                  <p className="text-2xl font-bold text-primary">2,400</p>
+                  <p className="text-xs text-muted-foreground">Including cocoa, chilli & horticulture crops</p>
                 </div>
                 <div>
                   <p className="font-medium">Survival Rate</p>
-                  <p className="text-2xl font-bold text-amber-600">68.4%</p>
-                  <p className="text-xs text-muted-foreground">-1.6% vs Q4 (drought impact)</p>
+                  <p className="text-2xl font-bold text-amber-600">58%</p>
+                  <p className="text-xs text-muted-foreground">-4% vs Q4 (dry season planting losses)</p>
                 </div>
                 <div>
                   <p className="font-medium">Operational Villages</p>
-                  <p className="text-2xl font-bold text-primary">24</p>
-                  <p className="text-xs text-muted-foreground">Psolo Sector + Usangu Basin</p>
+                  <p className="text-2xl font-bold text-primary">21</p>
+                  <p className="text-xs text-muted-foreground">Ifakara TC + Mbarali DC</p>
                 </div>
               </div>
               <Separator className="my-3" />
               <div className="text-sm">
                 <p className="font-medium mb-1">Key Highlights</p>
                 <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                  <li>Expanded farmer enrollment by 62 new farmers across 8 villages</li>
-                  <li>Mango seedlings showing highest survival rate (85%)</li>
-                  <li>Drought conditions in Usangu Basin impacting Grevillea survival (55%)</li>
-                  <li>12 cattle incidents reported in Usangu, 2 high severity</li>
-                  <li>47 field visits conducted, 100% synced to platform</li>
+                  <li>18 active chilli fences — 72% elephant deterrence success rate</li>
+                  <li>Cocoa agroforestry in year 3 for pilot farmers (55% survival — dry season losses)</li>
+                  <li>4 shambachungu groups active with 53 total members</li>
+                  <li>~100 horticulture farmers trained on short-cycle crops (onions, tomatoes, cabbage)</li>
+                  <li>Dry season planting losses identified — replanting strategy for April rains in progress</li>
+                  <li>Many seedlings still in nurseries — distribution timed to rainy season</li>
+                  <li>15 field visits conducted, 100% synced to platform</li>
                 </ul>
               </div>
             </div>

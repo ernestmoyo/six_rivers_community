@@ -32,7 +32,7 @@ const navigation = [
       { title: "Farmers", href: "/farming/farmers" },
       { title: "Distributions", href: "/farming/distributions" },
       { title: "Crop Cycles", href: "/farming/crops" },
-      { title: "Agroforestry", href: "/farming/agroforestry" },
+      { title: "Farming Approaches", href: "/farming/agroforestry" },
     ],
   },
   { title: "Nurseries", href: "/nurseries", icon: TreePine },

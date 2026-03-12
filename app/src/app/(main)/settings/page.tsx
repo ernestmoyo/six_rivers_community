@@ -12,9 +12,9 @@ import { Settings, Users, MapPin, Database, Link2 } from "lucide-react";
 const teamMembers = [
   { name: "Mary Marandu", role: "manager", email: "Mary.Marandu@sixriversafrica.com", area: "Mbarali" },
   { name: "Edna Sonda", role: "m_and_e", email: "edna.sonda@sixriversafrica.com", area: "M&E" },
-  { name: "Lilian Mihambo", role: "field_officer", email: "Lilian.Mihambo@sixriversafrica.com", area: "Usangu Basin" },
-  { name: "Justina Kizanye", role: "field_officer", email: "justina.kizanye@sixriversafrica.com", area: "Mbarali / Psolo" },
-  { name: "Irene Masonda", role: "field_officer", email: "irene.masonda@sixriversafrica.com", area: "Psolo Sector" },
+  { name: "Lilian Mihambo", role: "field_officer", email: "Lilian.Mihambo@sixriversafrica.com", area: "Mbarali DC" },
+  { name: "Justina Kizanye", role: "field_officer", email: "justina.kizanye@sixriversafrica.com", area: "Ifakara TC" },
+  { name: "Irene Masonda", role: "field_officer", email: "irene.masonda@sixriversafrica.com", area: "Ifakara TC" },
 ];
 
 export default function SettingsPage() {
@@ -78,15 +78,15 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <span className="text-sm font-medium">Psolo Sector</span>
-                  <p className="text-xs text-muted-foreground">Villages adjacent to Nyerere NP</p>
+                  <span className="text-sm font-medium">Ifakara Town Council</span>
+                  <p className="text-xs text-muted-foreground">Villages bordering Nyerere National Park</p>
                 </div>
                 <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">Active</Badge>
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <span className="text-sm font-medium">Usangu Basin</span>
-                  <p className="text-xs text-muted-foreground">Mbarali District - Usangu GR area</p>
+                  <span className="text-sm font-medium">Mbarali District Council</span>
+                  <p className="text-xs text-muted-foreground">Villages bordering Ruaha National Park</p>
                 </div>
                 <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">Active</Badge>
               </div>

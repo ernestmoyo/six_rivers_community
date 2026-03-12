@@ -31,7 +31,7 @@ export default function CattlePressureMapPage() {
     <div className="flex flex-col h-screen">
       <Header
         title="Cattle Pressure Map"
-        subtitle="Spatial distribution of cattle incidents in Usangu Basin"
+        subtitle="Spatial distribution of cattle incidents in Mbarali District"
       />
 
       <div className="flex flex-1 relative overflow-hidden">
@@ -78,7 +78,7 @@ export default function CattlePressureMapPage() {
               {/* Zone label */}
               <div className="absolute bottom-3 right-3">
                 <Badge variant="secondary" className="bg-amber-100 text-amber-800 text-[10px]">
-                  Usangu Basin
+                  Mbarali DC
                 </Badge>
               </div>
 

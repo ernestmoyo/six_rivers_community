@@ -3,16 +3,16 @@ export const APP_DESCRIPTION = "Community-centered intelligence platform for Six
 export const APP_VERSION = "0.1.0";
 
 export const OPERATIONAL_ZONES = {
-  psolo: {
-    name: "Psolo Sector",
-    description: "Villages adjacent to Nyerere National Park",
-    center: { lat: -8.5, lng: 37.5 },
+  ifakara: {
+    name: "Ifakara Town Council",
+    description: "Villages bordering Nyerere National Park",
+    center: { lat: -7.9, lng: 36.68 },
     zoom: 10,
   },
-  usangu_basin: {
-    name: "Usangu Basin",
-    description: "Mbarali District - Usangu Game Reserve area",
-    center: { lat: -8.7, lng: 34.1 },
+  mbarali: {
+    name: "Mbarali District Council",
+    description: "Villages bordering Ruaha National Park",
+    center: { lat: -8.2, lng: 34.55 },
     zoom: 10,
   },
 } as const;
@@ -26,6 +26,8 @@ export const MAP_CONFIG = {
 };
 
 export const SEEDLING_SPECIES = [
+  "Cocoa",
+  "Chilli",
   "Moringa",
   "Mango",
   "Avocado",
@@ -38,12 +40,13 @@ export const SEEDLING_SPECIES = [
   "Leucaena",
   "Gliricidia",
   "Casuarina",
-  "Pine",
   "Bamboo",
   "Other",
 ] as const;
 
 export const CROP_TYPES = [
+  "Chilli",
+  "Cocoa",
   "Onion",
   "Cassava",
   "Maize",
@@ -58,11 +61,47 @@ export const CROP_TYPES = [
   "Other",
 ] as const;
 
+export const FARMING_APPROACHES = {
+  chilli_fencing: {
+    label: "Chilli Fencing",
+    description: "Nature-based elephant deterrence — chilli planted around farm boundaries",
+    level: "Individual",
+  },
+  agroforestry: {
+    label: "Agroforestry",
+    description: "Wildlife-friendly tree-crop integration (e.g. cocoa planting)",
+    level: "Individual",
+  },
+  shambachungu: {
+    label: "Shambachungu",
+    description: "Group-wise wildlife-friendly farming",
+    level: "Group",
+  },
+  horticulture: {
+    label: "Horticulture",
+    description: "Short-cycle vegetable and crop farming (onions, tomatoes, cabbage)",
+    level: "Individual",
+  },
+  nursery: {
+    label: "Tree Nursery",
+    description: "Community nurseries for ecosystem restoration",
+    level: "Community",
+  },
+} as const;
+
 export const INCIDENT_TYPES = {
   restricted_grazing: { label: "Restricted Area Grazing", color: "#ef4444" },
   crop_damage: { label: "Crop Damage", color: "#f97316" },
   water_conflict: { label: "Water Point Conflict", color: "#3b82f6" },
   corridor_blockage: { label: "Corridor Blockage", color: "#8b5cf6" },
+  other: { label: "Other", color: "#6b7280" },
+} as const;
+
+export const WILDLIFE_INCIDENT_TYPES = {
+  crop_raid: { label: "Crop Raid", color: "#ef4444" },
+  property_damage: { label: "Property Damage", color: "#f97316" },
+  human_injury: { label: "Human Injury", color: "#dc2626" },
+  livestock_attack: { label: "Livestock Attack", color: "#8b5cf6" },
   other: { label: "Other", color: "#6b7280" },
 } as const;
 
@@ -79,4 +118,6 @@ export const VISIT_TYPES = {
   seedling_distribution: { label: "Seedling Distribution", icon: "Package" },
   incident_report: { label: "Incident Report", icon: "AlertTriangle" },
   survival_check: { label: "Survival Check", icon: "CheckCircle" },
+  chilli_fence_check: { label: "Chilli Fence Check", icon: "Shield" },
+  wildlife_report: { label: "Wildlife Report", icon: "AlertTriangle" },
 } as const;

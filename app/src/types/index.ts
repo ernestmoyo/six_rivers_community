@@ -1,3 +1,5 @@
+export type FarmingApproach = "chilli_fencing" | "agroforestry" | "shambachungu" | "horticulture" | "nursery";
+
 export interface Village {
   id: number;
   name: string;
@@ -7,7 +9,7 @@ export interface Village {
   regionName: string;
   population: number;
   isOperational: boolean;
-  sector: "psolo" | "usangu_basin" | null;
+  sector: "ifakara" | "mbarali" | null;
   distanceToNpKm: number | null;
   farmerCount: number;
   seedlingCount: number;
@@ -23,6 +25,7 @@ export interface Farmer {
   farmLocationLat: number | null;
   farmLocationLng: number | null;
   farmAreaHectares: number | null;
+  farmingApproach: FarmingApproach[];
   registeredAt: string;
   registeredBy: string;
 }
@@ -106,6 +109,50 @@ export interface CattleIncident {
   reportedBy: string;
 }
 
+export interface ChilliFence {
+  id: number;
+  farmerId: number;
+  farmerName: string;
+  villageName: string;
+  perimeterMetres: number;
+  chilliVariety: string;
+  installedDate: string;
+  status: "active" | "needs_replanting" | "damaged";
+  elephantDeterrenceEvents: number;
+  lastCheckedDate: string | null;
+  checkedBy: string | null;
+}
+
+export interface ShambachunguGroup {
+  id: number;
+  name: string;
+  villageId: number;
+  villageName: string;
+  memberCount: number;
+  areaHectares: number;
+  crops: string[];
+  treeSpecies: string[];
+  formedDate: string;
+  status: "active" | "forming" | "inactive";
+}
+
+export interface WildlifeIncident {
+  id: number;
+  locationLat: number;
+  locationLng: number;
+  villageId: number | null;
+  villageName: string | null;
+  animalType: "elephant" | "hippo" | "buffalo" | "other";
+  incidentType: "crop_raid" | "property_damage" | "human_injury" | "livestock_attack" | "other";
+  severity: "low" | "moderate" | "high";
+  date: string;
+  description: string | null;
+  chilliFencePresent: boolean;
+  deterrenceWorked: boolean | null;
+  photoUrl: string | null;
+  reportedBy: string;
+}
+
 export interface FieldVisit {
   id: number;
   userId: number;
@@ -113,7 +160,7 @@ export interface FieldVisit {
   villageId: number;
   villageName: string;
   visitDate: string;
-  visitType: "farm_check" | "nursery_check" | "community_meeting" | "seedling_distribution" | "incident_report" | "survival_check";
+  visitType: "farm_check" | "nursery_check" | "community_meeting" | "seedling_distribution" | "incident_report" | "survival_check" | "chilli_fence_check" | "wildlife_report";
   locationLat: number | null;
   locationLng: number | null;
   notes: string | null;
@@ -140,6 +187,10 @@ export interface KPISummary {
   activeCropCycles: number;
   cattleIncidentsThisMonth: number;
   fieldVisitsThisMonth: number;
+  activeChilliFences: number;
+  shambachunguGroups: number;
+  wildlifeIncidentsThisMonth: number;
+  elephantDeterrenceSuccessRate: number;
 }
 
 export interface UserRole {

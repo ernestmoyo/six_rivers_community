@@ -22,12 +22,14 @@ import {
   EyeOff,
   Map,
   Satellite,
+  AlertTriangle,
 } from "lucide-react";
 import {
   demoVillages,
   demoFarmers,
   demoNurseries,
   demoCattleIncidents,
+  demoWildlifeIncidents,
 } from "@/lib/demo-data";
 import { OPERATIONAL_ZONES, MAP_CONFIG } from "@/lib/constants";
 import Link from "next/link";
@@ -132,6 +134,7 @@ const OVERLAY_LAYERS = [
   { id: "farmers", label: "Farmers", icon: Sprout, color: "#3b82f6" },
   { id: "nurseries", label: "Nurseries", icon: TreePine, color: "#f59e0b" },
   { id: "cattle", label: "Cattle Incidents", icon: Beef, color: "#ef4444" },
+  { id: "wildlife", label: "Wildlife Incidents", icon: AlertTriangle, color: "#f97316" },
 ] as const;
 
 export default function MapPage() {
@@ -484,6 +487,50 @@ export default function MapPage() {
       });
     }
 
+    // Wildlife incidents
+    const wildlifeGeoJSON: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: demoWildlifeIncidents.map((w) => ({
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [w.locationLng, w.locationLat],
+        },
+        properties: {
+          village: w.villageName,
+          animal: w.animalType,
+          type: w.incidentType,
+          severity: w.severity,
+          deterred: w.deterrenceWorked,
+          description: w.description,
+        },
+      })),
+    };
+
+    if (!map.getSource("wildlife-source")) {
+      map.addSource("wildlife-source", { type: "geojson", data: wildlifeGeoJSON });
+      map.addLayer({
+        id: "wildlife-points",
+        type: "circle",
+        source: "wildlife-source",
+        paint: {
+          "circle-radius": 7,
+          "circle-color": [
+            "match",
+            ["get", "severity"],
+            "high",
+            "#ef4444",
+            "moderate",
+            "#f97316",
+            "#22c55e",
+          ],
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2,
+        },
+        layout: { visibility: "none" },
+      });
+    }
+
     // Click handlers for village polygons
     map.on("click", "villages-fill", (e) => {
       if (!e.features || e.features.length === 0) return;
@@ -617,10 +664,10 @@ export default function MapPage() {
     if (!zone) return;
 
     // Set district filter based on zone
-    if (zoneKey === "usangu_basin") {
+    if (zoneKey === "mbarali") {
       setSelectedDistrict("Mbarali");
-    } else if (zoneKey === "psolo") {
-      setSelectedDistrict("Kilombero");
+    } else if (zoneKey === "ifakara") {
+      setSelectedDistrict("Ifakara TC");
     }
     setSelectedWard("all");
     setSelectedVillageName("all");
@@ -786,6 +833,18 @@ export default function MapPage() {
             },
             color: "#ef4444",
           },
+          {
+            id: "wildlife",
+            data: {
+              type: "FeatureCollection" as const,
+              features: demoWildlifeIncidents.map((w) => ({
+                type: "Feature" as const,
+                geometry: { type: "Point" as const, coordinates: [w.locationLng, w.locationLat] },
+                properties: { village: w.villageName, severity: w.severity },
+              })),
+            },
+            color: "#f97316",
+          },
         ];
 
         for (const cfg of overlayConfigs) {
@@ -796,8 +855,8 @@ export default function MapPage() {
               type: "circle",
               source: `${cfg.id}-source`,
               paint: {
-                "circle-radius": cfg.id === "nurseries" ? 8 : cfg.id === "cattle" ? 7 : 6,
-                "circle-color": cfg.id === "cattle"
+                "circle-radius": cfg.id === "nurseries" ? 8 : (cfg.id === "cattle" || cfg.id === "wildlife") ? 7 : 6,
+                "circle-color": (cfg.id === "cattle" || cfg.id === "wildlife")
                   ? ["match", ["get", "severity"], "high", "#ef4444", "moderate", "#f59e0b", "#22c55e"]
                   : cfg.color,
                 "circle-stroke-color": "#ffffff",
@@ -875,8 +934,8 @@ export default function MapPage() {
                     key={key}
                     size="sm"
                     variant={
-                      (key === "usangu_basin" && selectedDistrict === "Mbarali") ||
-                      (key === "psolo" && selectedDistrict === "Kilombero")
+                      (key === "mbarali" && selectedDistrict === "Mbarali") ||
+                      (key === "ifakara" && selectedDistrict === "Ifakara TC")
                         ? "default"
                         : "outline"
                     }

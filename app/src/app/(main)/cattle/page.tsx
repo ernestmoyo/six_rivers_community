@@ -65,7 +65,7 @@ export default function CattlePage() {
     color: config.color,
   }));
 
-  const usanguVillages = demoVillages.filter((v) => v.sector === "usangu_basin");
+  const usanguVillages = demoVillages.filter((v) => v.sector === "mbarali");
 
   function captureGPS() {
     if (!navigator.geolocation) return;
@@ -102,7 +102,7 @@ export default function CattlePage() {
     <div className="flex flex-col">
       <Header
         title="Cattle Pressure Module"
-        subtitle="Usangu Basin - Monitoring cattle-related incidents and landscape pressure"
+        subtitle="Mbarali District — Monitoring cattle-related incidents near Ruaha NP"
       />
 
       <div className="flex flex-col gap-6 p-6">
@@ -203,7 +203,7 @@ export default function CattlePage() {
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Report Cattle Incident</DialogTitle>
-                <DialogDescription>Record a new cattle-related incident in the Usangu Basin.</DialogDescription>
+                <DialogDescription>Record a new cattle-related incident in Mbarali District.</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="grid gap-4">
                 <div className="grid gap-2">

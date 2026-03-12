@@ -27,13 +27,15 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Users, MapPin } from "lucide-react";
 import { demoFarmers, demoVillages } from "@/lib/demo-data";
+import { FARMING_APPROACHES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
-import type { Farmer } from "@/types";
+import type { Farmer, FarmingApproach } from "@/types";
 
 export default function FarmersPage() {
   const [farmers, setFarmers] = useState<Farmer[]>(demoFarmers);
   const [open, setOpen] = useState(false);
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedApproaches, setSelectedApproaches] = useState<FarmingApproach[]>([]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -49,11 +51,13 @@ export default function FarmersPage() {
       farmLocationLat: gps?.lat ?? null,
       farmLocationLng: gps?.lng ?? null,
       farmAreaHectares: fd.get("area") ? Number(fd.get("area")) : null,
+      farmingApproach: [...selectedApproaches],
       registeredAt: new Date().toISOString().split("T")[0],
       registeredBy: "Field Officer",
     };
     setFarmers((prev) => [newFarmer, ...prev]);
     setGps(null);
+    setSelectedApproaches([]);
     setOpen(false);
   }
 
@@ -116,7 +120,7 @@ export default function FarmersPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="area">Farm Area (hectares)</Label>
-                  <Input id="area" name="area" type="number" step="0.1" min="0" placeholder="e.g. 2.5" />
+                  <Input id="area" name="area" type="number" step="0.05" min="0" placeholder="e.g. 0.4" />
                 </div>
                 <div className="grid gap-2">
                   <Label>GPS Location</Label>
@@ -130,6 +134,26 @@ export default function FarmersPage() {
                         {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}
                       </span>
                     )}
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Farming Approach</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(Object.entries(FARMING_APPROACHES) as [FarmingApproach, { label: string }][]).map(([key, val]) => (
+                      <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedApproaches.includes(key)}
+                          onChange={() =>
+                            setSelectedApproaches((prev) =>
+                              prev.includes(key) ? prev.filter((a) => a !== key) : [...prev, key]
+                            )
+                          }
+                          className="rounded border-input"
+                        />
+                        {val.label}
+                      </label>
+                    ))}
                   </div>
                 </div>
                 <DialogFooter>
@@ -148,6 +172,7 @@ export default function FarmersPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Village</TableHead>
+                  <TableHead>Approach</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead className="text-right">Farm Area (ha)</TableHead>
                   <TableHead>Registered</TableHead>
@@ -160,6 +185,15 @@ export default function FarmersPage() {
                     <TableCell className="font-medium">{f.name}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">{f.villageName}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {f.farmingApproach.map((a) => (
+                          <Badge key={a} variant="secondary" className="text-[10px]">
+                            {FARMING_APPROACHES[a].label}
+                          </Badge>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{f.phone || "—"}</TableCell>
                     <TableCell className="text-right">{f.farmAreaHectares ?? "—"}</TableCell>

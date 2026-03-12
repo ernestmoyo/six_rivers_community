@@ -38,12 +38,12 @@ export default function VillageDetailPage() {
           <Badge
             variant="secondary"
             className={
-              village.sector === "psolo"
+              village.sector === "ifakara"
                 ? "bg-emerald-100 text-emerald-800"
                 : "bg-amber-100 text-amber-800"
             }
           >
-            {village.sector === "psolo" ? "Psolo Sector" : "Usangu Basin"}
+            {village.sector === "ifakara" ? "Ifakara Town Council" : "Mbarali District Council"}
           </Badge>
           {village.distanceToNpKm && (
             <Badge variant="secondary">
