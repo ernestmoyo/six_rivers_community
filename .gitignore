@@ -1,0 +1,77 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+.next/
+out/
+build/
+dist/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+~$*
+
+# Private / Confidential Documents
+# Meeting transcripts, correspondence, presentations
+*.pptx
+*.ppt
+correspondamce.txt
+six rivers.txt
+docs/correspondence/
+docs/meeting-notes/
+docs/presentations/
+
+# Raw downloaded repos (duplicated in data/)
+Tanzania_Admin_Shapefiles-main/
+Tanzania_Region_District_Population-main/
+tanzania-locations-db-main/
+
+# Large binary shapefiles (use conversion script to regenerate GeoJSON)
+data/shapefiles/*.shp
+data/shapefiles/*.dbf
+data/shapefiles/*.shx
+data/shapefiles/*.cpg
+data/shapefiles/*.qmd
+data/shapefiles/*.zip
+data/population/*.shp
+data/population/*.dbf
+data/population/*.shx
+data/population/*.cpg
+data/population/*.qmd
+
+# Debug & logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Testing
+coverage/
+
+# Misc
+*.log

@@ -1,0 +1,242 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+// ─── Geography (seeded from shapefiles) ─────────────────────────────
+
+model Region {
+  id         Int        @id @default(autoincrement())
+  name       String
+  population Int?
+  districts  District[]
+
+  @@map("regions")
+}
+
+model District {
+  id         Int      @id @default(autoincrement())
+  name       String
+  regionId   Int      @map("region_id")
+  region     Region   @relation(fields: [regionId], references: [id])
+  population Int?
+  wards      Ward[]
+
+  @@map("districts")
+}
+
+model Ward {
+  id          Int           @id @default(autoincrement())
+  name        String
+  districtId  Int           @map("district_id")
+  district    District      @relation(fields: [districtId], references: [id])
+  population  Int?
+  villages    Village[]
+  weatherData WeatherData[]
+
+  @@map("wards")
+}
+
+model Village {
+  id              Int        @id @default(autoincrement())
+  name            String
+  wardId          Int        @map("ward_id")
+  ward            Ward       @relation(fields: [wardId], references: [id])
+  isOperational   Boolean    @default(false) @map("is_operational")
+  sector          String?    // 'psolo' | 'usangu_basin'
+  distanceToNpKm  Float?     @map("distance_to_np_km")
+  farmers         Farmer[]
+  nurseries       Nursery[]
+  cattleIncidents CattleIncident[]
+  fieldVisits     FieldVisit[]
+
+  @@map("villages")
+}
+
+// ─── Users & Auth ────────────────────────────────────────────────────
+
+model User {
+  id                    Int                    @id @default(autoincrement())
+  name                  String
+  email                 String                 @unique
+  phone                 String?
+  role                  String                 // 'admin' | 'manager' | 'field_officer' | 'donor_viewer'
+  createdAt             DateTime               @default(now()) @map("created_at")
+  registeredFarmers     Farmer[]
+  distributions         SeedlingDistribution[]
+  survivalChecks        SurvivalCheck[]
+  fieldVisits           FieldVisit[]
+
+  @@map("users")
+}
+
+// ─── Farming ─────────────────────────────────────────────────────────
+
+model Farmer {
+  id                Int                    @id @default(autoincrement())
+  name              String
+  villageId         Int                    @map("village_id")
+  village           Village                @relation(fields: [villageId], references: [id])
+  phone             String?
+  farmLocationLat   Float?                 @map("farm_location_lat")
+  farmLocationLng   Float?                 @map("farm_location_lng")
+  farmAreaHectares  Float?                 @map("farm_area_hectares")
+  registeredBy      Int                    @map("registered_by")
+  registeredByUser  User                   @relation(fields: [registeredBy], references: [id])
+  registeredAt      DateTime               @default(now()) @map("registered_at")
+  distributions     SeedlingDistribution[]
+  cropCycles        CropCycle[]
+  agroforestryPlots AgroforestryPlot[]
+
+  @@map("farmers")
+}
+
+model SeedlingDistribution {
+  id               Int             @id @default(autoincrement())
+  farmerId         Int             @map("farmer_id")
+  farmer           Farmer          @relation(fields: [farmerId], references: [id])
+  species          String
+  quantity         Int
+  distributionDate DateTime        @map("distribution_date") @db.Date
+  nurseryId        Int?            @map("nursery_id")
+  nursery          Nursery?        @relation(fields: [nurseryId], references: [id])
+  distributedBy    Int             @map("distributed_by")
+  distributedByUser User           @relation(fields: [distributedBy], references: [id])
+  locationLat      Float?          @map("location_lat")
+  locationLng      Float?          @map("location_lng")
+  notes            String?
+  survivalChecks   SurvivalCheck[]
+
+  @@map("seedling_distributions")
+}
+
+model SurvivalCheck {
+  id             Int                  @id @default(autoincrement())
+  distributionId Int                  @map("distribution_id")
+  distribution   SeedlingDistribution @relation(fields: [distributionId], references: [id])
+  checkDate      DateTime             @map("check_date") @db.Date
+  survivingCount Int                  @map("surviving_count")
+  photoUrl       String?              @map("photo_url")
+  checkedBy      Int                  @map("checked_by")
+  checkedByUser  User                 @relation(fields: [checkedBy], references: [id])
+  notes          String?
+
+  @@map("survival_checks")
+}
+
+model CropCycle {
+  id                  Int       @id @default(autoincrement())
+  farmerId            Int       @map("farmer_id")
+  farmer              Farmer    @relation(fields: [farmerId], references: [id])
+  cropType            String    @map("crop_type")
+  plantingDate        DateTime  @map("planting_date") @db.Date
+  expectedHarvestDate DateTime? @map("expected_harvest_date") @db.Date
+  actualHarvestDate   DateTime? @map("actual_harvest_date") @db.Date
+  areaHectares        Float?    @map("area_hectares")
+  yieldKg             Float?    @map("yield_kg")
+
+  @@map("crop_cycles")
+}
+
+model AgroforestryPlot {
+  id             Int      @id @default(autoincrement())
+  farmerId       Int      @map("farmer_id")
+  farmer         Farmer   @relation(fields: [farmerId], references: [id])
+  areaHectares   Float?   @map("area_hectares")
+  speciesPlanted String[] @map("species_planted")
+  plantingDate   DateTime @map("planting_date") @db.Date
+
+  @@map("agroforestry_plots")
+}
+
+// ─── Nurseries ───────────────────────────────────────────────────────
+
+model Nursery {
+  id                Int                    @id @default(autoincrement())
+  name              String
+  villageId         Int                    @map("village_id")
+  village           Village                @relation(fields: [villageId], references: [id])
+  locationLat       Float?                 @map("location_lat")
+  locationLng       Float?                 @map("location_lng")
+  capacitySeedlings Int?                   @map("capacity_seedlings")
+  waterSource       String?                @map("water_source")
+  batches           NurseryBatch[]
+  distributions     SeedlingDistribution[]
+
+  @@map("nurseries")
+}
+
+model NurseryBatch {
+  id               Int       @id @default(autoincrement())
+  nurseryId        Int       @map("nursery_id")
+  nursery          Nursery   @relation(fields: [nurseryId], references: [id])
+  species          String
+  quantityPlanted  Int       @map("quantity_planted")
+  plantingDate     DateTime  @map("planting_date") @db.Date
+  germinationCount Int?      @map("germination_count")
+  readyDate        DateTime? @map("ready_date") @db.Date
+  status           String    // 'germinating' | 'growing' | 'ready' | 'distributed' | 'failed'
+
+  @@map("nursery_batches")
+}
+
+// ─── Cattle ──────────────────────────────────────────────────────────
+
+model CattleIncident {
+  id                Int      @id @default(autoincrement())
+  locationLat       Float    @map("location_lat")
+  locationLng       Float    @map("location_lng")
+  villageId         Int?     @map("village_id")
+  village           Village? @relation(fields: [villageId], references: [id])
+  incidentType      String   @map("incident_type")
+  severity          String
+  date              DateTime @db.Date
+  estimatedHerdSize Int?     @map("estimated_herd_size")
+  description       String?
+  photoUrl          String?  @map("photo_url")
+
+  @@map("cattle_incidents")
+}
+
+// ─── Field Visits ────────────────────────────────────────────────────
+
+model FieldVisit {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  villageId   Int       @map("village_id")
+  village     Village   @relation(fields: [villageId], references: [id])
+  visitDate   DateTime  @map("visit_date") @db.Date
+  visitType   String    @map("visit_type")
+  locationLat Float?    @map("location_lat")
+  locationLng Float?    @map("location_lng")
+  notes       String?
+  photos      String[]
+  syncedAt    DateTime? @map("synced_at")
+
+  @@map("field_visits")
+}
+
+// ─── Weather ─────────────────────────────────────────────────────────
+
+model WeatherData {
+  id           Int    @id @default(autoincrement())
+  wardId       Int    @map("ward_id")
+  ward         Ward   @relation(fields: [wardId], references: [id])
+  date         DateTime @db.Date
+  rainfallMm   Float?   @map("rainfall_mm")
+  tempMaxC     Float?   @map("temp_max_c")
+  tempMinC     Float?   @map("temp_min_c")
+  droughtIndex Float?   @map("drought_index")
+  source       String   @default("open-meteo")
+
+  @@unique([wardId, date])
+  @@map("weather_data")
+}
