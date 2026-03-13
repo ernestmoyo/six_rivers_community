@@ -22,7 +22,7 @@ export const MAP_CONFIG = {
   defaultZoom: 7,
   minZoom: 5,
   maxZoom: 18,
-  style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+  style: "mapbox://styles/mapbox/outdoors-v12",
 };
 
 export const SEEDLING_SPECIES = [

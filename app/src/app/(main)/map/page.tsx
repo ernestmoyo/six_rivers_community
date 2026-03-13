@@ -34,9 +34,11 @@ import {
 import { OPERATIONAL_ZONES, MAP_CONFIG } from "@/lib/constants";
 import Link from "next/link";
 
-// MapLibre GL types
-import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
+// Mapbox GL
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
 type SelectedFeature = {
   type: "village" | "ward" | "district" | "region";
@@ -45,81 +47,20 @@ type SelectedFeature = {
 };
 
 const BASEMAPS = {
-  streets: {
-    label: "Streets",
+  outdoors: {
+    label: "Outdoors",
     icon: Map,
-    url: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    url: "mapbox://styles/mapbox/outdoors-v12",
   },
   satellite: {
     label: "Satellite",
     icon: Satellite,
-    // ESRI World Imagery (free, no API key required)
-    url: {
-      version: 8,
-      sources: {
-        "esri-satellite": {
-          type: "raster",
-          tiles: [
-            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          ],
-          tileSize: 256,
-          maxzoom: 18,
-          attribution: "Esri, Maxar, Earthstar Geographics",
-        },
-      },
-      layers: [
-        {
-          id: "esri-satellite-layer",
-          type: "raster",
-          source: "esri-satellite",
-          minzoom: 0,
-          maxzoom: 18,
-        },
-      ],
-    } as maplibregl.StyleSpecification,
+    url: "mapbox://styles/mapbox/satellite-v9",
   },
   hybrid: {
     label: "Hybrid",
     icon: Satellite,
-    // Satellite + CartoDB labels overlay
-    url: {
-      version: 8,
-      sources: {
-        "esri-satellite": {
-          type: "raster",
-          tiles: [
-            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          ],
-          tileSize: 256,
-          maxzoom: 18,
-          attribution: "Esri, Maxar, Earthstar Geographics",
-        },
-        "carto-labels": {
-          type: "raster",
-          tiles: [
-            "https://basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}@2x.png",
-          ],
-          tileSize: 256,
-          maxzoom: 18,
-        },
-      },
-      layers: [
-        {
-          id: "esri-satellite-layer",
-          type: "raster",
-          source: "esri-satellite",
-          minzoom: 0,
-          maxzoom: 18,
-        },
-        {
-          id: "carto-labels-layer",
-          type: "raster",
-          source: "carto-labels",
-          minzoom: 0,
-          maxzoom: 18,
-        },
-      ],
-    } as maplibregl.StyleSpecification,
+    url: "mapbox://styles/mapbox/satellite-streets-v12",
   },
 } as const;
 
@@ -139,9 +80,9 @@ const OVERLAY_LAYERS = [
 
 export default function MapPage() {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [activeBasemap, setActiveBasemap] = useState<keyof typeof BASEMAPS>("streets");
+  const [activeBasemap, setActiveBasemap] = useState<keyof typeof BASEMAPS>("outdoors");
 
   // Filter state
   const [selectedDistrict, setSelectedDistrict] = useState<string>("all");
@@ -231,7 +172,7 @@ export default function MapPage() {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    const map = new maplibregl.Map({
+    const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: MAP_CONFIG.style,
       center: [MAP_CONFIG.defaultCenter.lng, MAP_CONFIG.defaultCenter.lat],
@@ -240,9 +181,9 @@ export default function MapPage() {
       maxZoom: MAP_CONFIG.maxZoom,
     });
 
-    map.addControl(new maplibregl.NavigationControl(), "top-right");
+    map.addControl(new mapboxgl.NavigationControl(), "top-right");
     map.addControl(
-      new maplibregl.ScaleControl({ maxWidth: 200, unit: "metric" }),
+      new mapboxgl.ScaleControl({ maxWidth: 200, unit: "metric" }),
       "bottom-right"
     );
 
@@ -535,7 +476,7 @@ export default function MapPage() {
     map.on("click", "villages-fill", (e) => {
       if (!e.features || e.features.length === 0) return;
       const feature = e.features[0];
-      const p = feature.properties;
+      const p = feature.properties ?? {};
       setSelectedFeature({
         type: "village",
         name: p.Vil_Mtaa_N || "Unknown",
@@ -546,7 +487,7 @@ export default function MapPage() {
     map.on("click", "wards-fill", (e) => {
       if (!e.features || e.features.length === 0) return;
       const feature = e.features[0];
-      const p = feature.properties;
+      const p = feature.properties ?? {};
       setSelectedFeature({
         type: "ward",
         name: p.ward_name || "Unknown",
@@ -600,7 +541,7 @@ export default function MapPage() {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
 
-    const villageSource = map.getSource("villages-source") as maplibregl.GeoJSONSource;
+    const villageSource = map.getSource("villages-source") as mapboxgl.GeoJSONSource;
     if (!villageSource || !geoData.villages) return;
 
     let filtered = geoData.villages.features;
@@ -618,7 +559,7 @@ export default function MapPage() {
     villageSource.setData({ type: "FeatureCollection", features: filtered });
 
     // Also filter wards source if district is selected
-    const wardSource = map.getSource("wards-source") as maplibregl.GeoJSONSource;
+    const wardSource = map.getSource("wards-source") as mapboxgl.GeoJSONSource;
     if (wardSource && geoData.wards) {
       let filteredWards = geoData.wards.features;
       if (selectedDistrict !== "all") {
@@ -637,7 +578,7 @@ export default function MapPage() {
 
     // Fit bounds to filtered features if a filter is active
     if (filtered.length > 0 && (selectedDistrict !== "all" || selectedWard !== "all" || selectedVillageName !== "all")) {
-      const bounds = new maplibregl.LngLatBounds();
+      const bounds = new mapboxgl.LngLatBounds();
       for (const f of filtered) {
         const coords = f.geometry!;
         if (coords.type === "Polygon") {
@@ -707,7 +648,7 @@ export default function MapPage() {
       const center = map.getCenter();
       const zoom = map.getZoom();
 
-      map.setStyle(style as string | maplibregl.StyleSpecification);
+      map.setStyle(style as string);
 
       // After new style loads, re-add all GeoJSON layers
       map.once("styledata", () => {
@@ -870,13 +811,13 @@ export default function MapPage() {
         // Re-add click handlers
         map.on("click", "villages-fill", (e) => {
           if (!e.features || e.features.length === 0) return;
-          const feature = e.features[0];
-          setSelectedFeature({ type: "village", name: feature.properties.Vil_Mtaa_N || "Unknown", properties: feature.properties });
+          const p = e.features[0].properties ?? {};
+          setSelectedFeature({ type: "village", name: p.Vil_Mtaa_N || "Unknown", properties: p });
         });
         map.on("click", "wards-fill", (e) => {
           if (!e.features || e.features.length === 0) return;
-          const feature = e.features[0];
-          setSelectedFeature({ type: "ward", name: feature.properties.ward_name || "Unknown", properties: feature.properties });
+          const p = e.features[0].properties ?? {};
+          setSelectedFeature({ type: "ward", name: p.ward_name || "Unknown", properties: p });
         });
         for (const layer of ["villages-fill", "wards-fill"]) {
           map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; });
