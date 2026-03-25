@@ -64,7 +64,7 @@ export default function DashboardPage() {
             value={demoKPIs.totalFarmers.toLocaleString()}
             icon={Users}
             trend="up"
-            trendValue="+12 this month"
+            trendValue="Across 21 villages"
             iconClassName="bg-blue-100 text-blue-600"
           />
           <KPICard
@@ -72,7 +72,7 @@ export default function DashboardPage() {
             value={demoKPIs.totalSeedlingsDistributed.toLocaleString()}
             icon={Sprout}
             trend="up"
-            trendValue="+180 this month"
+            trendValue="Including cocoa, chilli & horticulture"
             iconClassName="bg-green-100 text-green-600"
           />
           <KPICard
@@ -134,13 +134,13 @@ export default function DashboardPage() {
             value={`${demoKPIs.totalAgroforestryHectares} ha`}
             icon={TreePine}
             trend="up"
-            trendValue="+3.2 ha this quarter"
+            trendValue="Individual plots + shambachungu"
           />
           <KPICard
             title="Active Crop Cycles"
             value={demoKPIs.activeCropCycles}
             icon={Wheat}
-            subtitle="Mostly short-cycle horticulture"
+            subtitle="Short-cycle horticulture crops"
           />
           <KPICard
             title="Cattle Incidents"
@@ -153,8 +153,7 @@ export default function DashboardPage() {
             title="Field Visits"
             value={demoKPIs.fieldVisitsThisMonth}
             icon={ClipboardList}
-            trend="up"
-            trendValue="+5 vs last month"
+            subtitle="This month"
             iconClassName="bg-purple-100 text-purple-600"
           />
         </div>

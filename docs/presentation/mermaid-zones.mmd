@@ -1,0 +1,27 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#1e3a5f', 'lineColor': '#4a7c59', 'secondaryColor': '#e8f5e9', 'fontSize': '14px'}}}%%
+
+graph TB
+    SRA["SIX RIVERS AFRICA<br/>Community Operations"]
+
+    subgraph IFAKARA["IFAKARA TOWN COUNCIL<br/>13 Villages — Adjacent to Nyerere NP"]
+        direction TB
+        IW1["Kiberege Ward<br/>Nyamwezi, Mkasu, Bwawani"]
+        IW2["Kibaoni Ward<br/>Lugongole"]
+        IW3["Mwaya Ward<br/>Mhelule, Mikoleko"]
+        IW4["Sanje Ward<br/>Miwangani"]
+        IW5["Other Wards<br/>Katindiuka, Mpanga, Mbasa,<br/>Msalise, Sagamaganga, Signal"]
+    end
+
+    subgraph MBARALI["MBARALI DISTRICT COUNCIL<br/>8 Villages — Adjacent to Ruaha NP"]
+        direction TB
+        MW1["Miyombweni Ward<br/>Magigiwe"]
+        MW2["Kiberege Ward<br/>Mapogoro, Mlungu"]
+        MW3["Other Wards<br/>Iheha, Chalisuka, Mwaya,<br/>Ikoga Mpya, Nyakadete"]
+    end
+
+    SRA --> IFAKARA
+    SRA --> MBARALI
+
+    style SRA fill:#1e3a5f,stroke:#1e3a5f,color:#ffffff
+    style IFAKARA fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    style MBARALI fill:#fff8e1,stroke:#f57f17,color:#e65100

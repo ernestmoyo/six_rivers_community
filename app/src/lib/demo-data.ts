@@ -1,19 +1,6 @@
 import { KPISummary, Village, Farmer, SeedlingDistribution, SurvivalCheck, CropCycle, Nursery, NurseryBatch, CattleIncident, ChilliFence, ShambachunguGroup, WildlifeIncident, FieldVisit, WeatherData } from "@/types";
 
-export const demoKPIs: KPISummary = {
-  totalFarmers: 145,
-  totalSeedlingsDistributed: 2400,
-  averageSurvivalRate: 58,
-  totalAgroforestryHectares: 12.5,
-  operationalVillages: 21,
-  activeCropCycles: 38,
-  cattleIncidentsThisMonth: 5,
-  fieldVisitsThisMonth: 15,
-  activeChilliFences: 18,
-  shambachunguGroups: 4,
-  wildlifeIncidentsThisMonth: 6,
-  elephantDeterrenceSuccessRate: 72,
-};
+// KPIs are computed after all data arrays are defined — see bottom of file
 
 // ── Ifakara Town Council (bordering Nyerere NP) — 9 wards, 13 villages ──
 // ── Mbarali District Council (bordering Ruaha NP) — 7 wards, 8 villages ──
@@ -187,3 +174,30 @@ export const monthlyDistributions = [
   { month: "Feb 2026", count: 380 },
   { month: "Mar 2026", count: 150 },
 ];
+
+// ── Computed KPIs (derived from the arrays above so numbers always match) ──
+
+const _activeFences = demoChilliFences.filter((f) => f.status === "active");
+const _fencedIncidents = demoWildlifeIncidents.filter((i) => i.chilliFencePresent);
+const _deterredIncidents = _fencedIncidents.filter((i) => i.deterrenceWorked);
+const _agroPlotArea = 1.1; // from demoPlots in farming page (0.3+0.25+0.35+0.2)
+const _shambArea = demoShambachunguGroups.reduce((s, g) => s + g.areaHectares, 0);
+
+export const demoKPIs: KPISummary = {
+  totalFarmers: demoVillages.reduce((s, v) => s + v.farmerCount, 0),
+  totalSeedlingsDistributed: demoVillages.reduce((s, v) => s + v.seedlingCount, 0),
+  averageSurvivalRate: Math.round(
+    demoSurvivalChecks.reduce((s, c) => s + c.survivalRate, 0) / demoSurvivalChecks.length
+  ),
+  totalAgroforestryHectares: Math.round((_agroPlotArea + _shambArea) * 10) / 10,
+  operationalVillages: demoVillages.length,
+  activeCropCycles: demoCropCycles.filter((c) => !c.actualHarvestDate).length,
+  cattleIncidentsThisMonth: demoCattleIncidents.length,
+  fieldVisitsThisMonth: demoFieldVisits.length,
+  activeChilliFences: _activeFences.length,
+  shambachunguGroups: demoShambachunguGroups.length,
+  wildlifeIncidentsThisMonth: demoWildlifeIncidents.length,
+  elephantDeterrenceSuccessRate: _fencedIncidents.length > 0
+    ? Math.round((_deterredIncidents.length / _fencedIncidents.length) * 100)
+    : 0,
+};
