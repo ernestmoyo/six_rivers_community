@@ -27,7 +27,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Beef, AlertTriangle, MapPin, Plus } from "lucide-react";
+import { Beef, AlertTriangle, MapPin, Plus, Mail, Loader2 } from "lucide-react";
 import { demoCattleIncidents, demoVillages } from "@/lib/demo-data";
 import { INCIDENT_TYPES, SEVERITY_LEVELS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
@@ -49,6 +49,8 @@ export default function CattlePage() {
   const [incidents, setIncidents] = useState<CattleIncident[]>(demoCattleIncidents);
   const [open, setOpen] = useState(false);
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
+  const [sending, setSending] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<string | null>(null);
 
   const highSeverity = incidents.filter((i) => i.severity === "high").length;
   const totalHerdSize = incidents.reduce((sum, i) => sum + (i.estimatedHerdSize || 0), 0);
@@ -75,7 +77,7 @@ export default function CattlePage() {
     );
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const village = usanguVillages.find((v) => v.id === Number(fd.get("villageId")));
@@ -96,6 +98,36 @@ export default function CattlePage() {
     setIncidents((prev) => [newIncident, ...prev]);
     setGps(null);
     setOpen(false);
+
+    // Send email notification
+    setSending(true);
+    setEmailStatus(null);
+    try {
+      const res = await fetch("/api/cattle-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          villageName: newIncident.villageName,
+          incidentType: newIncident.incidentType,
+          severity: newIncident.severity,
+          estimatedHerdSize: newIncident.estimatedHerdSize,
+          description: newIncident.description,
+          reportedBy: newIncident.reportedBy,
+          date: newIncident.date,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmailStatus(`Notification sent to ${data.recipients} recipient(s)`);
+      } else {
+        setEmailStatus(`Email not sent: ${data.error}`);
+      }
+    } catch {
+      setEmailStatus("Email notification failed — check SMTP config");
+    } finally {
+      setSending(false);
+      setTimeout(() => setEmailStatus(null), 6000);
+    }
   }
 
   return (
@@ -106,6 +138,18 @@ export default function CattlePage() {
       />
 
       <div className="flex flex-col gap-6 p-6">
+        {/* Email notification status */}
+        {(sending || emailStatus) && (
+          <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
+            sending ? "bg-blue-50 text-blue-700" :
+            emailStatus?.startsWith("Notification sent") ? "bg-green-50 text-green-700" :
+            "bg-amber-50 text-amber-700"
+          }`}>
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            {sending ? "Sending email notification..." : emailStatus}
+          </div>
+        )}
+
         {/* KPIs */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard

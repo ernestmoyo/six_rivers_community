@@ -30,10 +30,15 @@ import {
   Package,
   AlertTriangle,
   CheckCircle,
+  Loader2,
+  ExternalLink,
+  Copy,
+  Check,
 } from "lucide-react";
-import { demoFieldVisits, demoDistributions } from "@/lib/demo-data";
+import { demoFieldVisits, demoDistributions, demoVillages } from "@/lib/demo-data";
 import { VISIT_TYPES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
+import type { FieldVisit } from "@/types";
 
 const visitTypeIcons: Record<string, React.ElementType> = {
   farm_check: Sprout,
@@ -42,18 +47,25 @@ const visitTypeIcons: Record<string, React.ElementType> = {
   seedling_distribution: Package,
   incident_report: AlertTriangle,
   survival_check: CheckCircle,
+  chilli_fence_check: ClipboardList,
+  wildlife_report: AlertTriangle,
 };
 
 export default function FieldVisitPage() {
+  const [visits, setVisits] = useState<FieldVisit[]>(demoFieldVisits);
   const [visitType, setVisitType] = useState("");
+  const [selectedVillageId, setSelectedVillageId] = useState("");
   const [selectedDistributionId, setSelectedDistributionId] = useState("");
   const [survivingCount, setSurvivingCount] = useState<number | "">("");
   const [conditionNotes, setConditionNotes] = useState("");
+  const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
   const handleQuickAction = (key: string) => {
     setVisitType(key);
-    // Reset survival check fields when switching types
     if (key !== "survival_check") {
       setSelectedDistributionId("");
       setSurvivingCount("");
@@ -80,12 +92,89 @@ export default function FieldVisitPage() {
           : "bg-red-100 text-red-800"
       : "";
 
+  function captureGPS() {
+    if (!navigator.geolocation) {
+      setGpsError("Geolocation not supported by this browser");
+      return;
+    }
+    setGpsLoading(true);
+    setGpsError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsLoading(false);
+      },
+      (err) => {
+        setGpsError(
+          err.code === 1
+            ? "Location access denied — enable in browser settings"
+            : "Unable to get location — try again"
+        );
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const village = demoVillages.find((v) => v.id === Number(selectedVillageId));
+
+    const newVisit: FieldVisit = {
+      id: Date.now(),
+      userId: 1,
+      userName: "Field Officer",
+      villageId: village?.id ?? 0,
+      villageName: village?.name ?? "Unknown",
+      visitDate: fd.get("date") as string,
+      visitType: visitType as FieldVisit["visitType"],
+      locationLat: gps?.lat ?? 0,
+      locationLng: gps?.lng ?? 0,
+      notes: (fd.get("notes") as string) || "",
+      photos: [],
+      syncedAt: new Date().toISOString(),
+    };
+
+    setVisits((prev) => [newVisit, ...prev]);
+
+    // Reset form
+    setVisitType("");
+    setSelectedVillageId("");
+    setGps(null);
+    setGpsError(null);
+    setSelectedDistributionId("");
+    setSurvivingCount("");
+    setConditionNotes("");
+    (e.target as HTMLFormElement).reset();
+  }
+
+  function copyShareLink() {
+    const url = `${window.location.origin}/field/visit`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
   return (
     <div className="flex flex-col">
       <Header title="Field Data Collection" subtitle="Record field visits, distribute seedlings, report incidents" />
 
       <div className="flex flex-col gap-6 p-6">
-        {/* Quick Action Cards - Mobile Friendly */}
+        {/* Share Link */}
+        <div className="flex items-center justify-between rounded-lg border bg-blue-50 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-blue-800">
+            <ExternalLink className="h-4 w-4" />
+            <span>Share this form with field officers so they can submit data remotely</span>
+          </div>
+          <Button size="sm" variant="outline" className="gap-1.5 text-blue-700 border-blue-300" onClick={copyShareLink}>
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied!" : "Copy Link"}
+          </Button>
+        </div>
+
+        {/* Quick Action Cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {Object.entries(VISIT_TYPES).map(([key, config]) => {
             const Icon = visitTypeIcons[key] || ClipboardList;
@@ -117,11 +206,13 @@ export default function FieldVisitPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="visitType">Visit Type</Label>
                 <select
                   id="visitType"
+                  name="visitType"
+                  required
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={visitType}
                   onChange={(e) => {
@@ -146,34 +237,52 @@ export default function FieldVisitPage() {
                 <Label htmlFor="village">Village</Label>
                 <select
                   id="village"
+                  name="villageId"
+                  required
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={selectedVillageId}
+                  onChange={(e) => setSelectedVillageId(e.target.value)}
                 >
                   <option value="">Select village...</option>
-                  <option value="1">Msolwa Ujamaa</option>
-                  <option value="2">Katurukila</option>
-                  <option value="3">Kidatu</option>
-                  <option value="4">Ichonde</option>
-                  <option value="5">Utengule</option>
+                  <optgroup label="Ifakara Town Council">
+                    {demoVillages.filter((v) => v.sector === "ifakara").map((v) => (
+                      <option key={v.id} value={v.id}>{v.name} ({v.wardName})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Mbarali District Council">
+                    {demoVillages.filter((v) => v.sector === "mbarali").map((v) => (
+                      <option key={v.id} value={v.id}>{v.name} ({v.wardName})</option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="date">Date</Label>
-                <Input id="date" type="date" defaultValue={new Date().toISOString().split("T")[0]} />
+                <Input id="date" name="date" type="date" required defaultValue={new Date().toISOString().split("T")[0]} />
               </div>
 
               <div className="flex flex-col gap-2">
                 <Label>GPS Location</Label>
-                <Button type="button" variant="secondary" className="gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Capture GPS
+                <Button type="button" variant="secondary" className="gap-2" onClick={captureGPS} disabled={gpsLoading}>
+                  {gpsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                  {gpsLoading ? "Getting location..." : "Capture GPS"}
                 </Button>
+                {gps && (
+                  <span className="text-xs text-green-600 font-medium">
+                    {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}
+                  </span>
+                )}
+                {gpsError && (
+                  <span className="text-xs text-red-500">{gpsError}</span>
+                )}
               </div>
 
               <div className="flex flex-col gap-2 sm:col-span-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
                   id="notes"
+                  name="notes"
                   placeholder="Describe the visit, observations, recommendations..."
                   rows={3}
                 />
@@ -305,7 +414,7 @@ export default function FieldVisitPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {demoFieldVisits.map((visit) => {
+                {visits.map((visit) => {
                   const Icon = visitTypeIcons[visit.visitType] || ClipboardList;
                   return (
                     <TableRow key={visit.id}>
@@ -317,7 +426,7 @@ export default function FieldVisitPage() {
                       <TableCell>
                         <Badge variant="secondary" className="gap-1 text-[10px]">
                           <Icon className="h-3 w-3" />
-                          {VISIT_TYPES[visit.visitType].label}
+                          {VISIT_TYPES[visit.visitType]?.label ?? visit.visitType}
                         </Badge>
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate text-muted-foreground">

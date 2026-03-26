@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Settings, Users, MapPin, Database, Link2 } from "lucide-react";
 
 const teamMembers = [
-  { name: "Mary Marandu", role: "manager", email: "Mary.Marandu@sixriversafrica.com", area: "Mbarali" },
+  { name: "Mary Marandu", role: "manager", email: "Mary.Marandu@sixriversafrica.com", area: "All Areas" },
   { name: "Edna Sonda", role: "m_and_e", email: "edna.sonda@sixriversafrica.com", area: "M&E" },
   { name: "Lilian Mihambo", role: "field_officer", email: "Lilian.Mihambo@sixriversafrica.com", area: "Mbarali DC" },
   { name: "Justina Kizanye", role: "field_officer", email: "justina.kizanye@sixriversafrica.com", area: "Ifakara TC" },
