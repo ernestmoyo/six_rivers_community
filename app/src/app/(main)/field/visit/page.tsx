@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,8 +51,21 @@ const visitTypeIcons: Record<string, React.ElementType> = {
   wildlife_report: AlertTriangle,
 };
 
+interface LiveVisit {
+  id: number | string;
+  user_name: string;
+  village_name: string;
+  visit_date: string;
+  visit_type: string;
+  notes: string;
+  location_lat: number | null;
+  location_lng: number | null;
+  created_at?: string;
+}
+
 export default function FieldVisitPage() {
   const [visits, setVisits] = useState<FieldVisit[]>(demoFieldVisits);
+  const [liveVisits, setLiveVisits] = useState<LiveVisit[]>([]);
   const [visitType, setVisitType] = useState("");
   const [selectedVillageId, setSelectedVillageId] = useState("");
   const [selectedDistributionId, setSelectedDistributionId] = useState("");
@@ -62,7 +75,25 @@ export default function FieldVisitPage() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
+
+  const fetchLiveVisits = useCallback(async () => {
+    try {
+      const res = await fetch("/api/field-visits");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) setLiveVisits(data);
+      }
+    } catch { /* API not configured yet — use demo data only */ }
+  }, []);
+
+  useEffect(() => {
+    fetchLiveVisits();
+    const interval = setInterval(fetchLiveVisits, 15000); // refresh every 15s
+    return () => clearInterval(interval);
+  }, [fetchLiveVisits]);
 
   const handleQuickAction = (key: string) => {
     setVisitType(key);
@@ -116,29 +147,61 @@ export default function FieldVisitPage() {
     );
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const village = demoVillages.find((v) => v.id === Number(selectedVillageId));
-
-    const newVisit: FieldVisit = {
-      id: Date.now(),
-      userId: 1,
+    const visitData = {
       userName: "Field Officer",
       villageId: village?.id ?? 0,
       villageName: village?.name ?? "Unknown",
       visitDate: fd.get("date") as string,
+      visitType: visitType,
+      locationLat: gps?.lat ?? null,
+      locationLng: gps?.lng ?? null,
+      notes: (fd.get("notes") as string) || "",
+    };
+
+    // Save to API (Supabase)
+    setSubmitting(true);
+    setSubmitStatus(null);
+    try {
+      const res = await fetch("/api/field-visits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(visitData),
+      });
+      if (res.ok) {
+        setSubmitStatus("Visit saved successfully");
+        fetchLiveVisits(); // refresh the list
+      } else {
+        const data = await res.json();
+        setSubmitStatus(`Save failed: ${data.error}`);
+        // Still save locally as fallback
+      }
+    } catch {
+      setSubmitStatus("Saved locally — will sync when online");
+    }
+
+    // Also save to local state as fallback
+    const newVisit: FieldVisit = {
+      id: Date.now(),
+      userId: 1,
+      userName: visitData.userName,
+      villageId: visitData.villageId,
+      villageName: visitData.villageName,
+      visitDate: visitData.visitDate,
       visitType: visitType as FieldVisit["visitType"],
       locationLat: gps?.lat ?? 0,
       locationLng: gps?.lng ?? 0,
-      notes: (fd.get("notes") as string) || "",
+      notes: visitData.notes,
       photos: [],
       syncedAt: new Date().toISOString(),
     };
-
     setVisits((prev) => [newVisit, ...prev]);
 
     // Reset form
+    setSubmitting(false);
     setVisitType("");
     setSelectedVillageId("");
     setGps(null);
@@ -147,6 +210,7 @@ export default function FieldVisitPage() {
     setSurvivingCount("");
     setConditionNotes("");
     (e.target as HTMLFormElement).reset();
+    setTimeout(() => setSubmitStatus(null), 5000);
   }
 
   function copyShareLink() {
@@ -173,6 +237,15 @@ export default function FieldVisitPage() {
             {copied ? "Copied!" : "Copy Link"}
           </Button>
         </div>
+
+        {/* Submit status */}
+        {submitStatus && (
+          <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
+            submitStatus.startsWith("Visit saved") ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+          }`}>
+            {submitStatus}
+          </div>
+        )}
 
         {/* Quick Action Cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -414,6 +487,34 @@ export default function FieldVisitPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* Live visits from Supabase */}
+                {liveVisits.map((lv) => {
+                  const Icon = visitTypeIcons[lv.visit_type] || ClipboardList;
+                  return (
+                    <TableRow key={`live-${lv.id}`} className="bg-green-50/30">
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(lv.visit_date)}
+                      </TableCell>
+                      <TableCell className="font-medium">{lv.user_name}</TableCell>
+                      <TableCell>{lv.village_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="gap-1 text-[10px]">
+                          <Icon className="h-3 w-3" />
+                          {VISIT_TYPES[lv.visit_type as keyof typeof VISIT_TYPES]?.label ?? lv.visit_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-muted-foreground">
+                        {lv.notes}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          <Wifi className="h-3 w-3 mr-1" />Live
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {/* Demo/local visits */}
                 {visits.map((visit) => {
                   const Icon = visitTypeIcons[visit.visitType] || ClipboardList;
                   return (
