@@ -32,6 +32,7 @@ import {
   demoVillages,
 } from "@/lib/demo-data";
 import { SEVERITY_LEVELS } from "@/lib/constants";
+import { useLiveKPIs } from "@/lib/useLiveKPIs";
 import {
   BarChart,
   Bar,
@@ -54,6 +55,25 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export default function DashboardPage() {
+  const live = useLiveKPIs();
+
+  // Merged values (seed + live Supabase submissions)
+  const fieldVisitsMerged = demoKPIs.fieldVisitsThisMonth + live.fieldVisitsThisMonth;
+  const cattleIncidentsMerged =
+    demoKPIs.cattleIncidentsThisMonth + live.cattleIncidentsThisMonth;
+
+  // IGA: swap the seed value of any group with a live update for its latest live value
+  let igaRevenueMerged = demoKPIs.totalIGARevenueTSh;
+  let igaCapitalMerged = demoKPIs.totalIGACapitalTSh;
+  if (live.latestUpdateByGroup.size > 0) {
+    const avgSeedCapital = demoKPIs.totalIGACapitalTSh / demoKPIs.totalIGAGroups;
+    const avgSeedRevenue = demoKPIs.totalIGARevenueTSh / demoKPIs.totalIGAGroups;
+    live.latestUpdateByGroup.forEach((u) => {
+      igaCapitalMerged += u.current_capital_tsh - avgSeedCapital;
+      igaRevenueMerged += u.revenue_tsh - avgSeedRevenue;
+    });
+  }
+
   return (
     <div className="flex flex-col">
       <Header
@@ -62,6 +82,13 @@ export default function DashboardPage() {
       />
 
       <div className="flex flex-col gap-6 p-6">
+        {live.hasAnyLiveData && (
+          <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-xs text-green-800">
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500" />
+            Live data connected — {live.fieldVisits.length} field visits, {live.cattleIncidents.length} cattle incidents, {live.latestUpdateByGroup.size} IGA group updates from Supabase. Auto-refreshes every 30 seconds.
+          </div>
+        )}
+
         {/* KPI Cards — Community */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
@@ -142,17 +169,23 @@ export default function DashboardPage() {
           />
           <KPICard
             title="IGA Capital"
-            value={`${(demoKPIs.totalIGACapitalTSh / 1_000_000).toFixed(1)}M TSh`}
+            value={`${(igaCapitalMerged / 1_000_000).toFixed(1)}M TSh`}
             icon={TrendingUp}
-            subtitle="Total current capital across groups"
+            subtitle={
+              live.latestUpdateByGroup.size > 0
+                ? `Live · ${live.latestUpdateByGroup.size} group update${live.latestUpdateByGroup.size === 1 ? "" : "s"}`
+                : "Total current capital across groups"
+            }
             iconClassName="bg-emerald-100 text-emerald-600"
           />
           <KPICard
             title="IGA Revenue"
-            value={`${(demoKPIs.totalIGARevenueTSh / 1_000_000).toFixed(1)}M TSh`}
+            value={`${(igaRevenueMerged / 1_000_000).toFixed(1)}M TSh`}
             icon={TrendingUp}
             trend="up"
-            trendValue="This round"
+            trendValue={
+              live.latestUpdateByGroup.size > 0 ? "Live · updated this session" : "This round"
+            }
             iconClassName="bg-teal-100 text-teal-600"
           />
           <KPICard
@@ -206,16 +239,24 @@ export default function DashboardPage() {
           />
           <KPICard
             title="Cattle Incidents"
-            value={demoKPIs.cattleIncidentsThisMonth}
+            value={cattleIncidentsMerged}
             icon={Beef}
-            subtitle="Mbarali District (Usangu)"
+            subtitle={
+              live.cattleIncidentsThisMonth > 0
+                ? `Live · ${live.cattleIncidentsThisMonth} this session`
+                : "Mbarali District (Usangu)"
+            }
             iconClassName="bg-red-100 text-red-600"
           />
           <KPICard
             title="Field Visits"
-            value={demoKPIs.fieldVisitsThisMonth}
+            value={fieldVisitsMerged}
             icon={ClipboardList}
-            subtitle="This month"
+            subtitle={
+              live.fieldVisitsThisMonth > 0
+                ? `Live · ${live.fieldVisitsThisMonth} this session`
+                : "This month"
+            }
             iconClassName="bg-purple-100 text-purple-600"
           />
           <KPICard
@@ -250,8 +291,8 @@ export default function DashboardPage() {
                           key={index}
                           fill={
                             index === monthlyDistributions.length - 1
-                              ? "hsl(142, 71%, 35%)"
-                              : "hsl(142, 71%, 65%)"
+                              ? "#EC5C2B"
+                              : "#071637"
                           }
                         />
                       ))}

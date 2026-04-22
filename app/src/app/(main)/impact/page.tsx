@@ -373,8 +373,8 @@ export default function ImpactPage() {
                     <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar yAxisId="right" dataKey="seedlings" name="Seedlings" fill="hsl(142, 71%, 55%)" radius={[4, 4, 0, 0]} />
-                    <Bar yAxisId="left" dataKey="farmers" name="Farmers" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="right" dataKey="seedlings" name="Seedlings" fill="#EC5C2B" radius={[4, 4, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="farmers" name="Farmers" fill="#071637" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
@@ -68,6 +70,18 @@ export default function FieldVisitPage() {
   const [liveVisits, setLiveVisits] = useState<LiveVisit[]>([]);
   const [visitType, setVisitType] = useState("");
   const [selectedVillageId, setSelectedVillageId] = useState("");
+  const [officerName, setOfficerName] = useState("");
+  const [locked, setLocked] = useState(false);
+
+  // Read query params on mount (avoids useSearchParams Suspense requirement)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("type")) setVisitType(sp.get("type") ?? "");
+    if (sp.get("village")) setSelectedVillageId(sp.get("village") ?? "");
+    if (sp.get("officer")) setOfficerName(sp.get("officer") ?? "");
+    if (sp.get("locked") === "1") setLocked(true);
+  }, []);
   const [selectedDistributionId, setSelectedDistributionId] = useState("");
   const [survivingCount, setSurvivingCount] = useState<number | "">("");
   const [conditionNotes, setConditionNotes] = useState("");
@@ -152,7 +166,7 @@ export default function FieldVisitPage() {
     const fd = new FormData(e.currentTarget);
     const village = demoVillages.find((v) => v.id === Number(selectedVillageId));
     const visitData = {
-      userName: "Field Officer",
+      userName: officerName || "Field Officer",
       villageId: village?.id ?? 0,
       villageName: village?.name ?? "Unknown",
       visitDate: fd.get("date") as string,
@@ -214,7 +228,13 @@ export default function FieldVisitPage() {
   }
 
   function copyShareLink() {
-    const url = `${window.location.origin}/field/visit`;
+    // Share a clean public URL (no sidebar) with any currently-selected filters baked in
+    const base = `${window.location.origin}/submit/field-visit`;
+    const params = new URLSearchParams();
+    if (selectedVillageId) params.set("village", selectedVillageId);
+    if (visitType) params.set("type", visitType);
+    if (officerName) params.set("officer", officerName);
+    const url = params.toString() ? `${base}?${params.toString()}` : base;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -286,7 +306,8 @@ export default function FieldVisitPage() {
                   id="visitType"
                   name="visitType"
                   required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  disabled={locked}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-60"
                   value={visitType}
                   onChange={(e) => {
                     setVisitType(e.target.value);
@@ -312,7 +333,8 @@ export default function FieldVisitPage() {
                   id="village"
                   name="villageId"
                   required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  disabled={locked}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-60"
                   value={selectedVillageId}
                   onChange={(e) => setSelectedVillageId(e.target.value)}
                 >

@@ -54,7 +54,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex flex-col">
-        <h1 className="text-lg font-semibold leading-tight">{title}</h1>
+        <h1 className="text-lg font-semibold leading-tight tracking-tight text-primary">{title}</h1>
         {subtitle && (
           <p className="text-xs text-muted-foreground">{subtitle}</p>
         )}

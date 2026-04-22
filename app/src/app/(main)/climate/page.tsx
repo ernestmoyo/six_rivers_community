@@ -160,8 +160,8 @@ export default function ClimatePage() {
                     <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="ifakara" name="Ifakara TC" fill="hsl(142, 71%, 55%)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="mbarali" name="Mbarali DC" fill="hsl(36, 100%, 55%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="ifakara" name="Ifakara TC" fill="#EC5C2B" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="mbarali" name="Mbarali DC" fill="#071637" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

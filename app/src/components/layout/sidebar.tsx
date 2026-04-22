@@ -20,6 +20,7 @@ import {
   Briefcase,
   GraduationCap,
   Radio,
+  Waves,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -165,12 +166,12 @@ export function Sidebar() {
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Sprout className="h-5 w-5 text-sidebar-primary-foreground" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EC5C2B]">
+            <Waves className="h-5 w-5 text-white" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-bold tracking-tight">Six Rivers</span>
-            <span className="text-[10px] font-medium text-sidebar-foreground/50 uppercase tracking-wider">
+            <span className="text-sm font-semibold tracking-tight uppercase">Six Rivers</span>
+            <span className="text-[10px] font-medium text-sidebar-foreground/60 uppercase tracking-wider">
               Community Intelligence
             </span>
           </div>
