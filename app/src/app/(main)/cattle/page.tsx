@@ -95,35 +95,41 @@ export default function CattlePage() {
       photoUrl: null,
       reportedBy: "Field Officer",
     };
+    // Show in table immediately (optimistic)
     setIncidents((prev) => [newIncident, ...prev]);
     setGps(null);
     setOpen(false);
 
-    // Send email notification
+    // Persist to Supabase + send email alert in one call
     setSending(true);
     setEmailStatus(null);
     try {
-      const res = await fetch("/api/cattle-notify", {
+      const res = await fetch("/api/cattle-incidents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          villageId: newIncident.villageId,
           villageName: newIncident.villageName,
           incidentType: newIncident.incidentType,
           severity: newIncident.severity,
+          date: newIncident.date,
           estimatedHerdSize: newIncident.estimatedHerdSize,
           description: newIncident.description,
+          locationLat: newIncident.locationLat || null,
+          locationLng: newIncident.locationLng || null,
           reportedBy: newIncident.reportedBy,
-          date: newIncident.date,
+          notifyEmail: true,
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        setEmailStatus(`Notification sent to ${data.recipients} recipient(s)`);
+        const emailLine = data.email?.sent ? " · email alert sent" : "";
+        setEmailStatus(`Incident saved to database${emailLine}`);
       } else {
-        setEmailStatus(`Email not sent: ${data.error}`);
+        setEmailStatus(`Not saved: ${data.error ?? "unknown error"}`);
       }
     } catch {
-      setEmailStatus("Email notification failed — check SMTP config");
+      setEmailStatus("Save failed — stored locally only, check connection");
     } finally {
       setSending(false);
       setTimeout(() => setEmailStatus(null), 6000);
@@ -138,15 +144,15 @@ export default function CattlePage() {
       />
 
       <div className="flex flex-col gap-6 p-6">
-        {/* Email notification status */}
+        {/* Save + email status */}
         {(sending || emailStatus) && (
           <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
             sending ? "bg-blue-50 text-blue-700" :
-            emailStatus?.startsWith("Notification sent") ? "bg-green-50 text-green-700" :
+            emailStatus?.startsWith("Incident saved") ? "bg-green-50 text-green-700" :
             "bg-amber-50 text-amber-700"
           }`}>
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-            {sending ? "Sending email notification..." : emailStatus}
+            {sending ? "Saving to database and sending alert..." : emailStatus}
           </div>
         )}
 

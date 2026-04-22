@@ -36,6 +36,8 @@ import {
   CheckCircle2,
   Pencil,
   Coins,
+  Loader2,
+  CheckCircle,
 } from "lucide-react";
 import { demoIGAGroups } from "@/lib/demo-data";
 import { IGA_TYPES, IGA_GROUP_STATUS, IGA_STARTUP_CAPITAL_TSH } from "@/lib/constants";
@@ -57,6 +59,10 @@ export default function IGAPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [editing, setEditing] = useState<IncomeGeneratingGroup | null>(null);
   const [open, setOpen] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{ saving: boolean; message: string | null }>({
+    saving: false,
+    message: null,
+  });
 
   const filtered = useMemo(
     () =>
@@ -81,7 +87,7 @@ export default function IGAPage() {
     setOpen(true);
   }
 
-  function handleFinancialSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleFinancialSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!editing) return;
     const fd = new FormData(e.currentTarget);
@@ -101,9 +107,39 @@ export default function IGAPage() {
       lastFinancialUpdate: new Date().toISOString().split("T")[0],
     };
 
+    // Optimistic update
     setGroups((prev) => prev.map((g) => (g.id === editing.id ? updated : g)));
     setEditing(null);
     setOpen(false);
+
+    // Persist to Supabase
+    setSaveStatus({ saving: true, message: null });
+    try {
+      const res = await fetch("/api/iga-updates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groupId: updated.id,
+          groupName: updated.name,
+          currentCapitalTSh: updated.currentCapitalTSh,
+          revenueTSh: updated.revenueTSh,
+          expenseTSh: updated.expenseTSh,
+          status: updated.status,
+          notes: updated.notes,
+          reportedBy: "Group Leader",
+        }),
+      });
+      if (res.ok) {
+        setSaveStatus({ saving: false, message: `Saved update for ${updated.name}` });
+      } else {
+        const data = await res.json();
+        setSaveStatus({ saving: false, message: `Save failed: ${data.error ?? "unknown"}` });
+      }
+    } catch {
+      setSaveStatus({ saving: false, message: "Save failed — offline or misconfigured" });
+    } finally {
+      setTimeout(() => setSaveStatus({ saving: false, message: null }), 5000);
+    }
   }
 
   return (
@@ -114,6 +150,28 @@ export default function IGAPage() {
       />
 
       <div className="flex flex-col gap-6 p-6">
+        {/* Save status */}
+        {(saveStatus.saving || saveStatus.message) && (
+          <div
+            className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
+              saveStatus.saving
+                ? "bg-blue-50 text-blue-700"
+                : saveStatus.message?.startsWith("Saved")
+                  ? "bg-green-50 text-green-700"
+                  : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            {saveStatus.saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : saveStatus.message?.startsWith("Saved") ? (
+              <CheckCircle className="h-4 w-4" />
+            ) : (
+              <AlertTriangle className="h-4 w-4" />
+            )}
+            {saveStatus.saving ? "Saving update to database..." : saveStatus.message}
+          </div>
+        )}
+
         {/* KPIs */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
