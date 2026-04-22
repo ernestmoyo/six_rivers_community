@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,12 +64,17 @@ export default function SubmitIGAUpdatePage() {
         const data = await res.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(data.error ?? "Could not save");
       }
+      toast.success(`Update saved for ${selectedGroup.name}`, {
+        description: "Group portfolio refreshed in the dashboard",
+      });
 
       router.push(
         `/submit/done?kind=iga-update&group=${encodeURIComponent(selectedGroup.name)}`
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Submission failed");
+      const msg = err instanceof Error ? err.message : "Submission failed";
+      toast.error("Could not submit", { description: msg });
+      setError(msg);
       setSubmitting(false);
     }
   }

@@ -17,7 +17,12 @@ import {
   FileText,
   Calendar,
   BarChart3,
+  Mail,
+  Send,
+  Loader2,
 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   demoKPIs,
   demoVillages,
@@ -294,6 +299,72 @@ export default function ImpactPage() {
   const activeGroups = demoShambachunguGroups.filter((g) => g.status === "active").length;
   const totalMembers = demoShambachunguGroups.reduce((s, g) => s + g.memberCount, 0);
   const hortFarmers = demoFarmers.filter((f) => f.farmingApproach.includes("horticulture")).length;
+  const [sending, setSending] = useState<"edna" | "team" | null>(null);
+
+  async function sendReportTo(recipient: "edna" | "team") {
+    setSending(recipient);
+    const loadingId = toast.loading(
+      recipient === "edna"
+        ? "Sending M&E report to Edna..."
+        : "Sending report to management team..."
+    );
+    try {
+      const summary =
+        recipient === "edna"
+          ? "Hi Edna, here is the latest M&E snapshot for the Six Rivers community programme. All KPIs are computed from live data. Full PDF to follow in a later cycle."
+          : "Hi team, sharing this quarter's impact snapshot for your review. KPIs are live-computed from the dashboard.";
+      const res = await fetch("/api/send-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: recipient,
+          reportTitle: "Six Rivers Community Programme — Impact Snapshot",
+          reportPeriod: "Q1 2026 (January – March)",
+          summary,
+          kpis: {
+            "Farmers engaged": demoKPIs.totalFarmers,
+            "Active farmers": demoKPIs.activeFarmers,
+            "Farmer dropouts": demoKPIs.droppedOutFarmers,
+            "Seedlings distributed": demoKPIs.totalSeedlingsDistributed.toLocaleString(),
+            "Avg survival rate": `${demoKPIs.averageSurvivalRate}%`,
+            "Active chilli fences": activeFences,
+            "Elephant deterrence rate": `${demoKPIs.elephantDeterrenceSuccessRate}%`,
+            "Active IGA groups": `${demoKPIs.activeIGAGroups} / ${demoKPIs.totalIGAGroups}`,
+            "IGA revenue (TSh)": `${(demoKPIs.totalIGARevenueTSh / 1_000_000).toFixed(1)}M`,
+            "Eco Club schools": demoKPIs.ecoClubSchools,
+            "Radio sessions 2025": demoKPIs.radioSessionsAired,
+            "Operational villages": demoKPIs.operationalVillages,
+          },
+          highlights: [
+            `${activeFences} chilli fences active with ${demoKPIs.elephantDeterrenceSuccessRate}% elephant deterrence success`,
+            `${activeGroups} Shamba Chungu groups active with ${totalMembers} members`,
+            `${hortFarmers} horticulture farmers on short-cycle crops (onions, tomatoes, cabbage)`,
+            `Dry-season planting losses flagged — replanting strategy for April rains in progress`,
+            `${demoKPIs.fieldVisitsThisMonth} field visits this month, 100% synced to platform`,
+          ],
+        }),
+      });
+      const data = await res.json();
+      toast.dismiss(loadingId);
+      if (res.ok) {
+        toast.success(
+          recipient === "edna" ? "Report sent to Edna" : "Report sent to the team",
+          {
+            description: `Delivered to ${(data.recipients ?? []).join(", ")}`,
+          }
+        );
+      } else {
+        toast.error("Could not send report", { description: data.error ?? "" });
+      }
+    } catch (err) {
+      toast.dismiss(loadingId);
+      toast.error("Could not send report", {
+        description: err instanceof Error ? err.message : "Network error",
+      });
+    } finally {
+      setSending(null);
+    }
+  }
 
   return (
     <div className="flex flex-col">
@@ -309,14 +380,34 @@ export default function ImpactPage() {
             <BarChart3 className="h-5 w-5 text-primary" />
             <h2 className="font-semibold">Programme Impact Summary</h2>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCSV}>
               <Download className="h-4 w-4" />
               Export CSV
             </Button>
             <Button size="sm" className="gap-1.5" onClick={downloadReport}>
               <FileText className="h-4 w-4" />
-              Generate Quarterly Report
+              Generate Quarterly PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => sendReportTo("edna")}
+              disabled={sending !== null}
+            >
+              {sending === "edna" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              Send to Edna (M&E)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => sendReportTo("team")}
+              disabled={sending !== null}
+            >
+              {sending === "team" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Send to Management Team
             </Button>
           </div>
         </div>

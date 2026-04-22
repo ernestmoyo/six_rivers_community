@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,12 +86,19 @@ export default function SubmitCattleIncidentPage() {
         const data = await res.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(data.error ?? "Could not save");
       }
+      const data = await res.json();
+      const emailNote = data?.email?.sent ? " · email alert sent" : "";
+      toast.success("Cattle incident reported!", {
+        description: `Saved to database${emailNote}`,
+      });
 
       router.push(
         `/submit/done?kind=cattle-incident&village=${encodeURIComponent(village?.name ?? "")}`
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Submission failed");
+      const msg = err instanceof Error ? err.message : "Submission failed";
+      toast.error("Could not submit", { description: msg });
+      setError(msg);
       setSubmitting(false);
     }
   }

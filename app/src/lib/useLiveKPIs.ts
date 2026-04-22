@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { toast } from "sonner";
 
 // ─── Row shapes (snake_case — match Supabase column names) ───
 
@@ -100,6 +101,14 @@ export function useLiveKPIs(): LiveKPIs {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Track known IDs across polls so we can fire toasts only for new rows
+  const knownIds = useRef<{ fv: Set<string>; ci: Set<string>; iga: Set<string> }>({
+    fv: new Set(),
+    ci: new Set(),
+    iga: new Set(),
+  });
+  const isFirstLoad = useRef(true);
+
   const refresh = useCallback(async () => {
     try {
       const [fv, ci, iga] = await Promise.all([
@@ -107,6 +116,47 @@ export function useLiveKPIs(): LiveKPIs {
         fetchJson<LiveCattleIncident>("/api/cattle-incidents"),
         fetchJson<LiveIGAUpdate>("/api/iga-updates"),
       ]);
+
+      // Detect NEW rows since last poll (skip toasts on first load)
+      if (!isFirstLoad.current) {
+        fv.forEach((v) => {
+          const id = String(v.id);
+          if (!knownIds.current.fv.has(id)) {
+            toast.success("New field visit submitted", {
+              description: `${v.user_name} · ${v.village_name ?? "(no village)"}`,
+              duration: 6000,
+            });
+          }
+        });
+        ci.forEach((c) => {
+          const id = String(c.id);
+          if (!knownIds.current.ci.has(id)) {
+            const severityIcon = c.severity === "high" ? "🚨 " : "";
+            toast.warning(`${severityIcon}Cattle incident reported`, {
+              description: `${c.village_name ?? "(no village)"} · ${c.incident_type.replace(/_/g, " ")} · ${c.severity}`,
+              duration: 8000,
+            });
+          }
+        });
+        iga.forEach((u) => {
+          const id = String(u.id);
+          if (!knownIds.current.iga.has(id)) {
+            const statusEmoji =
+              u.status === "struggling" ? "⚠️ " : u.status === "inactive" ? "⛔ " : "✅ ";
+            toast.info(`${statusEmoji}IGA update · ${u.group_name}`, {
+              description: `Capital ${(u.current_capital_tsh / 1_000_000).toFixed(1)}M TSh · Revenue ${(u.revenue_tsh / 1_000_000).toFixed(1)}M · Status: ${u.status}`,
+              duration: 7000,
+            });
+          }
+        });
+      }
+
+      // Update the known-ID sets
+      knownIds.current.fv = new Set(fv.map((v) => String(v.id)));
+      knownIds.current.ci = new Set(ci.map((c) => String(c.id)));
+      knownIds.current.iga = new Set(iga.map((u) => String(u.id)));
+      isFirstLoad.current = false;
+
       setFieldVisits(fv);
       setCattleIncidents(ci);
       setIgaUpdates(iga);

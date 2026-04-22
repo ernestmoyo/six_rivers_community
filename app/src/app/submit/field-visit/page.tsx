@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,11 +87,17 @@ export default function SubmitFieldVisitPage() {
         throw new Error(data.error ?? "Could not save");
       }
 
+      toast.success("Field visit submitted!", {
+        description: `Saved to the central database · ${village?.name ?? ""}`,
+      });
+
       router.push(
         `/submit/done?kind=field-visit&village=${encodeURIComponent(village?.name ?? "")}`
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Submission failed");
+      const msg = err instanceof Error ? err.message : "Submission failed";
+      toast.error("Could not submit", { description: msg });
+      setError(msg);
       setSubmitting(false);
     }
   }
