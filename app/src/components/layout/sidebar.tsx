@@ -17,6 +17,9 @@ import {
   ChevronDown,
   Menu,
   X,
+  Briefcase,
+  GraduationCap,
+  Radio,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -46,6 +49,9 @@ const navigation = [
       { title: "Pressure Map", href: "/cattle/map" },
     ],
   },
+  { title: "IGA Groups", href: "/iga", icon: Briefcase },
+  { title: "Eco Clubs", href: "/eco-clubs", icon: GraduationCap },
+  { title: "Radio Programme", href: "/radio", icon: Radio },
   { title: "Field Collection", href: "/field/visit", icon: ClipboardList },
   { title: "Impact", href: "/impact", icon: BarChart3 },
   { title: "Climate", href: "/climate", icon: Cloud },

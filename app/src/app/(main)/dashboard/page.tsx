@@ -17,6 +17,11 @@ import {
   CheckCircle,
   Package,
   Shield,
+  Briefcase,
+  TrendingUp,
+  GraduationCap,
+  Radio,
+  UserMinus,
 } from "lucide-react";
 import {
   demoKPIs,
@@ -57,14 +62,14 @@ export default function DashboardPage() {
       />
 
       <div className="flex flex-col gap-6 p-6">
-        {/* KPI Cards */}
+        {/* KPI Cards — Community */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
             title="Farmers Engaged"
             value={demoKPIs.totalFarmers.toLocaleString()}
             icon={Users}
             trend="up"
-            trendValue="Across 21 villages"
+            trendValue={`${demoKPIs.activeFarmers} active, ${demoKPIs.droppedOutFarmers} dropped`}
             iconClassName="bg-blue-100 text-blue-600"
           />
           <KPICard
@@ -72,7 +77,7 @@ export default function DashboardPage() {
             value={demoKPIs.totalSeedlingsDistributed.toLocaleString()}
             icon={Sprout}
             trend="up"
-            trendValue="Including cocoa, chilli & horticulture"
+            trendValue="Cocoa, chilli & horticulture"
             iconClassName="bg-green-100 text-green-600"
           />
           <KPICard
@@ -87,8 +92,7 @@ export default function DashboardPage() {
             title="Operational Villages"
             value={demoVillages.length}
             icon={MapPin}
-            trend="flat"
-            trendValue="No change"
+            subtitle="Msolwa (Ifakara TC) + Usangu (Mbarali DC)"
             iconClassName="bg-amber-100 text-amber-600"
           />
         </div>
@@ -119,16 +123,63 @@ export default function DashboardPage() {
             iconClassName="bg-orange-100 text-orange-600"
           />
           <KPICard
-            title="Shambachungu Groups"
-            value={demoKPIs.shambachunguGroups}
-            icon={Users}
-            subtitle="Group wildlife-friendly farming"
-            iconClassName="bg-blue-100 text-blue-600"
+            title="Trees Planted"
+            value={demoKPIs.totalTreesPlanted.toLocaleString()}
+            icon={TreePine}
+            subtitle="Agroforestry + nursery distribution"
+            iconClassName="bg-green-100 text-green-600"
           />
         </div>
 
-        {/* Third row KPIs */}
+        {/* Third row KPIs — IGA / Financial */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KPICard
+            title="Active IGA Groups"
+            value={`${demoKPIs.activeIGAGroups} / ${demoKPIs.totalIGAGroups}`}
+            icon={Briefcase}
+            subtitle="Income generating activity groups"
+            iconClassName="bg-indigo-100 text-indigo-600"
+          />
+          <KPICard
+            title="IGA Capital"
+            value={`${(demoKPIs.totalIGACapitalTSh / 1_000_000).toFixed(1)}M TSh`}
+            icon={TrendingUp}
+            subtitle="Total current capital across groups"
+            iconClassName="bg-emerald-100 text-emerald-600"
+          />
+          <KPICard
+            title="IGA Revenue"
+            value={`${(demoKPIs.totalIGARevenueTSh / 1_000_000).toFixed(1)}M TSh`}
+            icon={TrendingUp}
+            trend="up"
+            trendValue="This round"
+            iconClassName="bg-teal-100 text-teal-600"
+          />
+          <KPICard
+            title="Trees Surviving"
+            value={`${demoKPIs.totalTreesSurviving} / ${demoKPIs.totalTreesPlanted}`}
+            icon={TreePine}
+            subtitle={`${demoKPIs.totalTreesPlanted > 0 ? Math.round((demoKPIs.totalTreesSurviving / demoKPIs.totalTreesPlanted) * 100) : 0}% overall survival`}
+            iconClassName="bg-green-100 text-green-600"
+          />
+        </div>
+
+        {/* Fourth row KPIs — Community Outreach */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KPICard
+            title="Eco Club Schools"
+            value={demoKPIs.ecoClubSchools}
+            icon={GraduationCap}
+            subtitle={`${demoKPIs.ecoClubStudents} students engaged`}
+            iconClassName="bg-sky-100 text-sky-600"
+          />
+          <KPICard
+            title="Radio Sessions"
+            value={demoKPIs.radioSessionsAired}
+            icon={Radio}
+            subtitle="Uhifadhi na Jamii · 2025"
+            iconClassName="bg-violet-100 text-violet-600"
+          />
           <KPICard
             title="Agroforestry Area"
             value={`${demoKPIs.totalAgroforestryHectares} ha`}
@@ -136,6 +187,17 @@ export default function DashboardPage() {
             trend="up"
             trendValue="Individual plots + shambachungu"
           />
+          <KPICard
+            title="Farmer Dropouts"
+            value={demoKPIs.droppedOutFarmers}
+            icon={UserMinus}
+            subtitle="Review at next PO visit cycle"
+            iconClassName="bg-red-100 text-red-600"
+          />
+        </div>
+
+        {/* Fifth row KPIs — Operations */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
             title="Active Crop Cycles"
             value={demoKPIs.activeCropCycles}
@@ -146,7 +208,7 @@ export default function DashboardPage() {
             title="Cattle Incidents"
             value={demoKPIs.cattleIncidentsThisMonth}
             icon={Beef}
-            subtitle="Mbarali District"
+            subtitle="Mbarali District (Usangu)"
             iconClassName="bg-red-100 text-red-600"
           />
           <KPICard
@@ -155,6 +217,13 @@ export default function DashboardPage() {
             icon={ClipboardList}
             subtitle="This month"
             iconClassName="bg-purple-100 text-purple-600"
+          />
+          <KPICard
+            title="Shambachungu Groups"
+            value={demoKPIs.shambachunguGroups}
+            icon={Users}
+            subtitle="Group wildlife-friendly farming"
+            iconClassName="bg-blue-100 text-blue-600"
           />
         </div>
 

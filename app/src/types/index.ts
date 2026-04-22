@@ -28,6 +28,14 @@ export interface Farmer {
   farmingApproach: FarmingApproach[];
   registeredAt: string;
   registeredBy: string;
+  isActive: boolean;
+  droppedOutAt: string | null;
+  dropoutReason: string | null;
+  totalTreesPlanted: number;
+  treesSurviving: number;
+  trainingReceived: string[];
+  extensionOfficer: string | null;
+  lastPOVisit: string | null;
 }
 
 export interface SeedlingDistribution {
@@ -178,8 +186,82 @@ export interface WeatherData {
   droughtIndex: number | null;
 }
 
+export type IGAType =
+  | "pig_keeping"
+  | "poultry_keeping"
+  | "sunflower_oil"
+  | "value_addition"
+  | "soap_making"
+  | "soft_drinks"
+  | "milk_processing"
+  | "bicycle"
+  | "other";
+
+export type IGAGroupStatus = "active" | "struggling" | "inactive";
+
+export interface IncomeGeneratingGroup {
+  id: number;
+  name: string;
+  villageId: number | null;
+  villageName: string;
+  ward: string;
+  sector: "ifakara" | "mbarali";
+  igaType: IGAType;
+  memberCount: number;
+  maleCount: number;
+  femaleCount: number;
+  startupCapitalTSh: number;
+  currentCapitalTSh: number;
+  revenueTSh: number;
+  expenseTSh: number;
+  status: IGAGroupStatus;
+  formedDate: string;
+  lastFinancialUpdate: string | null;
+  notes: string | null;
+}
+
+export interface EcoClub {
+  id: number;
+  schoolName: string;
+  villageName: string;
+  ward: string;
+  district: string;
+  region: string;
+  sector: "ifakara" | "mbarali";
+  maleCount: number;
+  femaleCount: number;
+  teachers: string[];
+  sessionsCompleted: number;
+  ecoSafariParticipants: number;
+  active: boolean;
+}
+
+export interface RadioSession {
+  id: number;
+  airDate: string;
+  topic: string;
+  guestSpeaker: string | null;
+  guestOrganization: string | null;
+  sector: "ifakara" | "mbarali" | "both";
+  notes: string | null;
+}
+
+export interface RadioWinner {
+  id: number;
+  name: string;
+  village: string;
+  sector: "ifakara" | "mbarali";
+  gender: "male" | "female" | "unknown";
+  sessionDate: string | null;
+  prize: string | null;
+}
+
 export interface KPISummary {
   totalFarmers: number;
+  activeFarmers: number;
+  droppedOutFarmers: number;
+  totalTreesPlanted: number;
+  totalTreesSurviving: number;
   totalSeedlingsDistributed: number;
   averageSurvivalRate: number;
   totalAgroforestryHectares: number;
@@ -191,6 +273,13 @@ export interface KPISummary {
   shambachunguGroups: number;
   wildlifeIncidentsThisMonth: number;
   elephantDeterrenceSuccessRate: number;
+  activeIGAGroups: number;
+  totalIGAGroups: number;
+  totalIGACapitalTSh: number;
+  totalIGARevenueTSh: number;
+  ecoClubSchools: number;
+  ecoClubStudents: number;
+  radioSessionsAired: number;
 }
 
 export interface UserRole {

@@ -5,12 +5,18 @@ export const APP_VERSION = "0.1.0";
 export const OPERATIONAL_ZONES = {
   ifakara: {
     name: "Ifakara Town Council",
+    officialName: "Ifakara Town Council",
+    sectorName: "Msolwa",
+    displayName: "Msolwa (Ifakara TC)",
     description: "Villages bordering Nyerere National Park",
     center: { lat: -7.9, lng: 36.68 },
     zoom: 10,
   },
   mbarali: {
     name: "Mbarali District Council",
+    officialName: "Mbarali District Council",
+    sectorName: "Usangu",
+    displayName: "Usangu (Mbarali DC)",
     description: "Villages bordering Ruaha National Park",
     center: { lat: -8.2, lng: 34.55 },
     zoom: 10,
@@ -121,3 +127,44 @@ export const VISIT_TYPES = {
   chilli_fence_check: { label: "Chilli Fence Check", icon: "Shield" },
   wildlife_report: { label: "Wildlife Report", icon: "AlertTriangle" },
 } as const;
+
+export const IGA_TYPES = {
+  pig_keeping: { label: "Pig Keeping", color: "#f97316" },
+  poultry_keeping: { label: "Poultry Keeping", color: "#f59e0b" },
+  sunflower_oil: { label: "Sunflower Oil", color: "#eab308" },
+  value_addition: { label: "Value Addition", color: "#22c55e" },
+  soap_making: { label: "Soap Making", color: "#06b6d4" },
+  soft_drinks: { label: "Soft Drinks", color: "#3b82f6" },
+  milk_processing: { label: "Milk Processing", color: "#8b5cf6" },
+  bicycle: { label: "Bicycle Services", color: "#6b7280" },
+  other: { label: "Other", color: "#64748b" },
+} as const;
+
+export const IGA_GROUP_STATUS = {
+  active: { label: "Active", color: "#22c55e", bgColor: "#dcfce7" },
+  struggling: { label: "Struggling", color: "#f59e0b", bgColor: "#fef3c7" },
+  inactive: { label: "Inactive", color: "#ef4444", bgColor: "#fee2e2" },
+} as const;
+
+export const FARMER_STATUS = {
+  active: { label: "Active", color: "#22c55e", bgColor: "#dcfce7" },
+  dropped_out: { label: "Dropped Out", color: "#ef4444", bgColor: "#fee2e2" },
+} as const;
+
+export const TRAINING_TOPICS = [
+  "Chilli Fencing Techniques",
+  "Agroforestry Basics",
+  "Cocoa Cultivation",
+  "Horticulture & Vegetable Farming",
+  "Pest Management",
+  "Soil Health & Conservation",
+  "Seedling Care & Survival",
+  "Group Farming / Shamba Chungu",
+  "Financial Literacy",
+  "Post-Harvest Handling",
+  "Tree Nursery Management",
+  "Human-Wildlife Coexistence",
+] as const;
+
+export const IGA_STARTUP_CAPITAL_TSH = 3500000;
+

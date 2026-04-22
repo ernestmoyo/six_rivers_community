@@ -25,17 +25,29 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Plus, Users, MapPin } from "lucide-react";
+import { Plus, Users, MapPin, TrendingUp, TrendingDown, CircleCheck, CircleX, GraduationCap } from "lucide-react";
 import { demoFarmers, demoVillages } from "@/lib/demo-data";
-import { FARMING_APPROACHES } from "@/lib/constants";
+import { FARMING_APPROACHES, FARMER_STATUS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import type { Farmer, FarmingApproach } from "@/types";
+
+type StatusFilter = "all" | "active" | "dropped_out";
 
 export default function FarmersPage() {
   const [farmers, setFarmers] = useState<Farmer[]>(demoFarmers);
   const [open, setOpen] = useState(false);
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedApproaches, setSelectedApproaches] = useState<FarmingApproach[]>([]);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  const filteredFarmers = farmers.filter((f) =>
+    statusFilter === "all" ? true : statusFilter === "active" ? f.isActive : !f.isActive
+  );
+
+  const activeCount = farmers.filter((f) => f.isActive).length;
+  const droppedCount = farmers.length - activeCount;
+  const totalTreesPlanted = farmers.reduce((s, f) => s + f.totalTreesPlanted, 0);
+  const totalTreesSurviving = farmers.reduce((s, f) => s + f.treesSurviving, 0);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -54,6 +66,14 @@ export default function FarmersPage() {
       farmingApproach: [...selectedApproaches],
       registeredAt: new Date().toISOString().split("T")[0],
       registeredBy: "Field Officer",
+      isActive: true,
+      droppedOutAt: null,
+      dropoutReason: null,
+      totalTreesPlanted: 0,
+      treesSurviving: 0,
+      trainingReceived: [],
+      extensionOfficer: null,
+      lastPOVisit: null,
     };
     setFarmers((prev) => [newFarmer, ...prev]);
     setGps(null);
@@ -74,14 +94,78 @@ export default function FarmersPage() {
       <Header title="Registered Farmers" subtitle="All farmers enrolled in the program" />
 
       <div className="flex flex-col gap-6 p-6">
-        <div className="flex items-center justify-between">
+        {/* Summary + Register button */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+                <CircleCheck className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{activeCount}</p>
+                <p className="text-xs text-muted-foreground">Active Farmers</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
+                <CircleX className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{droppedCount}</p>
+                <p className="text-xs text-muted-foreground">Dropped Out</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalTreesSurviving.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">
+                  Trees surviving ({totalTreesPlanted > 0 ? Math.round((totalTreesSurviving / totalTreesPlanted) * 100) : 0}% of {totalTreesPlanted.toLocaleString()})
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+                <TrendingDown className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalTreesPlanted - totalTreesSurviving}</p>
+                <p className="text-xs text-muted-foreground">Trees lost</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filter + register */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
               <Users className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{farmers.length}</p>
-              <p className="text-xs text-muted-foreground">Total Farmers</p>
+              <p className="text-2xl font-bold">{filteredFarmers.length}</p>
+              <p className="text-xs text-muted-foreground">
+                {statusFilter === "all" ? "Total Farmers" : statusFilter === "active" ? "Active Farmers" : "Dropped Out Farmers"}
+              </p>
+            </div>
+            <div className="flex gap-1.5 ml-4">
+              <Button size="sm" variant={statusFilter === "all" ? "default" : "outline"} onClick={() => setStatusFilter("all")}>
+                All
+              </Button>
+              <Button size="sm" variant={statusFilter === "active" ? "default" : "outline"} onClick={() => setStatusFilter("active")}>
+                Active
+              </Button>
+              <Button size="sm" variant={statusFilter === "dropped_out" ? "default" : "outline"} onClick={() => setStatusFilter("dropped_out")}>
+                Dropped Out
+              </Button>
             </div>
           </div>
 
@@ -172,37 +256,113 @@ export default function FarmersPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Village</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Approach</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead className="text-right">Farm Area (ha)</TableHead>
-                  <TableHead>Registered</TableHead>
-                  <TableHead>Registered By</TableHead>
+                  <TableHead className="text-right">Trees</TableHead>
+                  <TableHead>Training</TableHead>
+                  <TableHead>Last Visit</TableHead>
+                  <TableHead>Officer</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {farmers.map((f) => (
-                  <TableRow key={f.id}>
-                    <TableCell className="font-medium">{f.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{f.villageName}</Badge>
+                {filteredFarmers.map((f) => {
+                  const statusKey = f.isActive ? "active" : "dropped_out";
+                  const statusConfig = FARMER_STATUS[statusKey];
+                  const survivalPct = f.totalTreesPlanted > 0
+                    ? Math.round((f.treesSurviving / f.totalTreesPlanted) * 100)
+                    : null;
+                  return (
+                    <TableRow key={f.id} className={!f.isActive ? "bg-red-50/30" : ""}>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>{f.name}</span>
+                          {f.phone && (
+                            <span className="text-xs text-muted-foreground">{f.phone}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{f.villageName}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="secondary"
+                          style={{
+                            backgroundColor: statusConfig.bgColor,
+                            color: statusConfig.color,
+                          }}
+                        >
+                          {statusConfig.label}
+                        </Badge>
+                        {!f.isActive && f.droppedOutAt && (
+                          <div className="text-[10px] text-muted-foreground mt-1 max-w-40">
+                            {formatDate(f.droppedOutAt)}
+                            {f.dropoutReason && <div className="italic truncate">{f.dropoutReason}</div>}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {f.farmingApproach.map((a) => (
+                            <Badge key={a} variant="secondary" className="text-[10px]">
+                              {FARMING_APPROACHES[a].label}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {f.totalTreesPlanted > 0 ? (
+                          <div className="flex flex-col items-end">
+                            <span className="text-sm font-medium">
+                              {f.treesSurviving}
+                              <span className="text-muted-foreground">/{f.totalTreesPlanted}</span>
+                            </span>
+                            <span
+                              className={
+                                survivalPct !== null && survivalPct >= 65
+                                  ? "text-xs text-green-600"
+                                  : survivalPct !== null && survivalPct >= 40
+                                    ? "text-xs text-amber-600"
+                                    : "text-xs text-red-500"
+                              }
+                            >
+                              {survivalPct}% survival
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {f.trainingReceived.length > 0 ? (
+                          <div className="flex items-center gap-1">
+                            <GraduationCap className="h-3.5 w-3.5 text-blue-600" />
+                            <span className="text-xs font-medium">{f.trainingReceived.length}</span>
+                            <span className="text-[10px] text-muted-foreground max-w-35 truncate">
+                              {f.trainingReceived[0]}
+                              {f.trainingReceived.length > 1 ? ` +${f.trainingReceived.length - 1}` : ""}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">None</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {f.lastPOVisit ? formatDate(f.lastPOVisit) : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {f.extensionOfficer || "—"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {filteredFarmers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      No farmers match the current filter.
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {f.farmingApproach.map((a) => (
-                          <Badge key={a} variant="secondary" className="text-[10px]">
-                            {FARMING_APPROACHES[a].label}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{f.phone || "—"}</TableCell>
-                    <TableCell className="text-right">{f.farmAreaHectares ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(f.registeredAt)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{f.registeredBy}</TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
