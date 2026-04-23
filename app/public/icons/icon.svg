@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Orange tile (brand) with rounded corners; safe zone ~80% for Android adaptive masks -->
+  <rect width="512" height="512" rx="96" ry="96" fill="#EC5C2B"/>
+  <!-- Six white wave lines, evoking the Six Rivers mark -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round">
+    <path d="M112 192 Q 176 152 240 192 T 368 192 T 400 192" />
+    <path d="M112 248 Q 176 208 240 248 T 368 248 T 400 248" />
+    <path d="M112 304 Q 176 264 240 304 T 368 304 T 400 304" />
+    <path d="M112 360 Q 176 320 240 360 T 368 360 T 400 360" />
+  </g>
+</svg>

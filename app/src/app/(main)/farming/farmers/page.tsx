@@ -26,6 +26,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Plus, Users, MapPin, TrendingUp, TrendingDown, CircleCheck, CircleX, GraduationCap } from "lucide-react";
+import { toast } from "sonner";
 import { demoFarmers, demoVillages } from "@/lib/demo-data";
 import { FARMING_APPROACHES, FARMER_STATUS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
@@ -82,10 +83,24 @@ export default function FarmersPage() {
   }
 
   function captureGPS() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported by this device");
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
-      (pos) => setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => alert("Unable to get GPS location")
+      (pos) => {
+        setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        toast.success("Location captured", {
+          description: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`,
+        });
+      },
+      (err) =>
+        toast.error("Unable to get location", {
+          description:
+            err.code === 1
+              ? "Location access denied — enable in browser settings"
+              : "Could not get GPS fix — try again",
+        })
     );
   }
 
