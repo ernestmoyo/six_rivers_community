@@ -7,8 +7,31 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Download, FileSpreadsheet, ArrowLeft, FileText } from "lucide-react";
+import { Download, FileSpreadsheet, ArrowLeft, FileText, Loader2 } from "lucide-react";
 import Link from "next/link";
+import * as XLSX from "xlsx";
+import { toast } from "sonner";
+import {
+  demoKPIs,
+  demoVillages,
+  demoFarmers,
+  demoDistributions,
+  demoSurvivalChecks,
+  demoCropCycles,
+  demoShambachunguGroups,
+  demoNurseries,
+  demoNurseryBatches,
+  demoCattleIncidents,
+  demoWildlifeIncidents,
+  demoFieldVisits,
+  demoChilliFences,
+  demoIGAGroups,
+  demoEcoClubs,
+  demoRadioSessions,
+  demoRadioWinners,
+  demoWeatherData,
+  survivalBySpecies,
+} from "@/lib/demo-data";
 
 interface DataCategory {
   key: string;
@@ -17,15 +40,22 @@ interface DataCategory {
 }
 
 const DATA_CATEGORIES: DataCategory[] = [
-  { key: "farmers", label: "Farmers", estimatedRows: 342 },
-  { key: "distributions", label: "Distributions", estimatedRows: 1240 },
-  { key: "survival_checks", label: "Survival Checks", estimatedRows: 486 },
-  { key: "crop_cycles", label: "Crop Cycles", estimatedRows: 186 },
-  { key: "agroforestry", label: "Agroforestry", estimatedRows: 95 },
-  { key: "nurseries", label: "Nurseries", estimatedRows: 38 },
-  { key: "cattle_incidents", label: "Cattle Incidents", estimatedRows: 52 },
-  { key: "field_visits", label: "Field Visits", estimatedRows: 198 },
-  { key: "climate", label: "Climate", estimatedRows: 720 },
+  { key: "summary", label: "Programme Summary (KPIs)", estimatedRows: 16 },
+  { key: "villages", label: "Villages", estimatedRows: demoVillages.length },
+  { key: "farmers", label: "Farmers (full lifecycle)", estimatedRows: demoFarmers.length },
+  { key: "iga", label: "IGA Groups", estimatedRows: demoIGAGroups.length },
+  { key: "eco_clubs", label: "Eco Clubs", estimatedRows: demoEcoClubs.length },
+  { key: "shambachungu", label: "Shambachungu groups", estimatedRows: demoShambachunguGroups.length },
+  { key: "chilli_fences", label: "Chilli Fences", estimatedRows: demoChilliFences.length },
+  { key: "distributions", label: "Seedling Distributions", estimatedRows: demoDistributions.length },
+  { key: "survival_checks", label: "Survival Checks", estimatedRows: demoSurvivalChecks.length },
+  { key: "crop_cycles", label: "Crop Cycles", estimatedRows: demoCropCycles.length },
+  { key: "nurseries", label: "Nurseries + Batches", estimatedRows: demoNurseries.length + demoNurseryBatches.length },
+  { key: "wildlife_incidents", label: "Wildlife Incidents", estimatedRows: demoWildlifeIncidents.length },
+  { key: "cattle_incidents", label: "Cattle Incidents", estimatedRows: demoCattleIncidents.length },
+  { key: "field_visits", label: "Field Visits", estimatedRows: demoFieldVisits.length },
+  { key: "radio", label: "Radio Sessions + Winners", estimatedRows: demoRadioSessions.length + demoRadioWinners.length },
+  { key: "climate", label: "Climate / Weather", estimatedRows: demoWeatherData.length },
 ];
 
 const QUARTERS = ["Q1 2026", "Q4 2025", "Q3 2025"];
@@ -61,8 +91,313 @@ export default function ImpactExportPage() {
   const selectedCategories = DATA_CATEGORIES.filter((c) => checkedCategories.has(c.key));
   const totalRows = selectedCategories.reduce((sum, c) => sum + c.estimatedRows, 0);
 
-  const handleExport = (format: string) => {
-    alert("Export started \u2014 file will download shortly.");
+  const [exporting, setExporting] = useState(false);
+
+  const buildWorkbook = () => {
+    const wb = XLSX.utils.book_new();
+    let sheetsAdded = 0;
+    let rowsTotal = 0;
+    const addSheet = <T extends Record<string, unknown>>(name: string, rows: T[]): void => {
+      if (rows.length === 0) return;
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31));
+      sheetsAdded++;
+      rowsTotal += rows.length;
+    };
+
+    if (checkedCategories.has("summary")) {
+      const kpiRows = Object.entries(demoKPIs).map(([metric, value]) => ({
+        Metric: metric,
+        Value: typeof value === "number" ? value : String(value),
+      }));
+      addSheet("Summary KPIs", kpiRows);
+      addSheet(
+        "Species survival",
+        survivalBySpecies.map((s) => ({ Species: s.species, SurvivalPct: s.rate }))
+      );
+    }
+    if (checkedCategories.has("villages")) {
+      addSheet(
+        "Villages",
+        demoVillages.map((v) => ({
+          Name: v.name,
+          Sector: v.sector === "ifakara" ? "Msolwa" : "Usangu",
+          District: v.districtName,
+          Ward: v.wardName,
+          Region: v.regionName,
+          Population: v.population,
+          FarmerCount: v.farmerCount,
+          SeedlingCount: v.seedlingCount,
+          DistanceToNPKm: v.distanceToNpKm,
+        }))
+      );
+    }
+    if (checkedCategories.has("farmers")) {
+      addSheet(
+        "Farmers",
+        demoFarmers.map((f) => ({
+          Name: f.name,
+          Village: f.villageName,
+          Phone: f.phone ?? "",
+          FarmAreaHa: f.farmAreaHectares,
+          Approach: f.farmingApproach.join("; "),
+          IsActive: f.isActive,
+          DroppedOutAt: f.droppedOutAt ?? "",
+          DropoutReason: f.dropoutReason ?? "",
+          TreesPlanted: f.totalTreesPlanted,
+          TreesSurviving: f.treesSurviving,
+          Training: f.trainingReceived.join("; "),
+          Officer: f.extensionOfficer ?? "",
+          LastPOVisit: f.lastPOVisit ?? "",
+          Registered: f.registeredAt,
+        }))
+      );
+    }
+    if (checkedCategories.has("iga")) {
+      addSheet(
+        "IGA groups",
+        demoIGAGroups.map((g) => ({
+          Name: g.name,
+          Village: g.villageName,
+          Ward: g.ward,
+          Sector: g.sector === "ifakara" ? "Msolwa" : "Usangu",
+          Type: g.igaType,
+          Members: g.memberCount,
+          Male: g.maleCount,
+          Female: g.femaleCount,
+          CurrentCapitalTSh: g.currentCapitalTSh,
+          RevenueTSh: g.revenueTSh,
+          ExpenseTSh: g.expenseTSh,
+          NetTSh: g.revenueTSh - g.expenseTSh,
+          Status: g.status,
+          FormedDate: g.formedDate,
+          Notes: g.notes ?? "",
+        }))
+      );
+    }
+    if (checkedCategories.has("eco_clubs")) {
+      addSheet(
+        "Eco Clubs",
+        demoEcoClubs.map((c) => ({
+          School: c.schoolName,
+          Village: c.villageName,
+          Ward: c.ward,
+          District: c.district,
+          Sector: c.sector === "ifakara" ? "Msolwa" : "Usangu",
+          Male: c.maleCount,
+          Female: c.femaleCount,
+          Teachers: c.teachers.join("; "),
+          SessionsCompleted: c.sessionsCompleted,
+          SafariParticipants: c.ecoSafariParticipants,
+        }))
+      );
+    }
+    if (checkedCategories.has("shambachungu")) {
+      addSheet(
+        "Shambachungu",
+        demoShambachunguGroups.map((g) => ({
+          Name: g.name,
+          Village: g.villageName,
+          Members: g.memberCount,
+          AreaHa: g.areaHectares,
+          Crops: g.crops.join("; "),
+          Trees: g.treeSpecies.join("; "),
+          Status: g.status,
+        }))
+      );
+    }
+    if (checkedCategories.has("chilli_fences")) {
+      addSheet(
+        "Chilli Fences",
+        demoChilliFences.map((f) => ({
+          Farmer: f.farmerName,
+          Village: f.villageName,
+          PerimeterM: f.perimeterMetres,
+          Variety: f.chilliVariety,
+          Installed: f.installedDate,
+          Status: f.status,
+          DeterrenceEvents: f.elephantDeterrenceEvents,
+          LastChecked: f.lastCheckedDate ?? "",
+        }))
+      );
+    }
+    if (checkedCategories.has("distributions")) {
+      addSheet(
+        "Distributions",
+        demoDistributions.map((d) => ({
+          Farmer: d.farmerName,
+          Species: d.species,
+          Quantity: d.quantity,
+          Date: d.distributionDate,
+          Nursery: d.nurseryName ?? "",
+          SurvivalPct: d.survivalRate ?? "",
+        }))
+      );
+    }
+    if (checkedCategories.has("survival_checks")) {
+      addSheet(
+        "Survival Checks",
+        demoSurvivalChecks.map((s) => ({
+          DistributionId: s.distributionId,
+          CheckDate: s.checkDate,
+          Surviving: s.survivingCount,
+          Original: s.originalCount,
+          SurvivalPct: s.survivalRate,
+          Notes: s.notes ?? "",
+        }))
+      );
+    }
+    if (checkedCategories.has("crop_cycles")) {
+      addSheet(
+        "Crop Cycles",
+        demoCropCycles.map((c) => ({
+          Farmer: c.farmerName,
+          Crop: c.cropType,
+          Planted: c.plantingDate,
+          ExpectedHarvest: c.expectedHarvestDate ?? "",
+          ActualHarvest: c.actualHarvestDate ?? "",
+          AreaHa: c.areaHectares ?? "",
+          YieldKg: c.yieldKg ?? "",
+        }))
+      );
+    }
+    if (checkedCategories.has("nurseries")) {
+      addSheet(
+        "Nurseries",
+        demoNurseries.map((n) => ({
+          Name: n.name,
+          Village: n.villageName,
+          Capacity: n.capacitySeedlings ?? "",
+          WaterSource: n.waterSource ?? "",
+          TotalProduced: n.totalProduced,
+          TotalDistributed: n.totalDistributed,
+        }))
+      );
+      addSheet(
+        "Nursery Batches",
+        demoNurseryBatches.map((b) => ({
+          NurseryId: b.nurseryId,
+          Species: b.species,
+          Planted: b.plantingDate,
+          QuantityPlanted: b.quantityPlanted,
+          Germinated: b.germinationCount ?? "",
+          Status: b.status,
+        }))
+      );
+    }
+    if (checkedCategories.has("wildlife_incidents")) {
+      addSheet(
+        "Wildlife Incidents",
+        demoWildlifeIncidents.map((w) => ({
+          Date: w.date,
+          Village: w.villageName ?? "",
+          Animal: w.animalType,
+          IncidentType: w.incidentType,
+          Severity: w.severity,
+          Description: w.description ?? "",
+          ChilliFencePresent: w.chilliFencePresent,
+          DeterrenceWorked: w.deterrenceWorked === null ? "" : w.deterrenceWorked,
+          Lat: w.locationLat,
+          Lng: w.locationLng,
+        }))
+      );
+    }
+    if (checkedCategories.has("cattle_incidents")) {
+      addSheet(
+        "Cattle Incidents",
+        demoCattleIncidents.map((c) => ({
+          Date: c.date,
+          Village: c.villageName ?? "",
+          IncidentType: c.incidentType,
+          Severity: c.severity,
+          EstimatedHerd: c.estimatedHerdSize ?? "",
+          Description: c.description ?? "",
+          Lat: c.locationLat,
+          Lng: c.locationLng,
+        }))
+      );
+    }
+    if (checkedCategories.has("field_visits")) {
+      addSheet(
+        "Field Visits",
+        demoFieldVisits.map((v) => ({
+          Date: v.visitDate,
+          Officer: v.userName,
+          Village: v.villageName,
+          Type: v.visitType,
+          Notes: v.notes ?? "",
+          Lat: v.locationLat ?? "",
+          Lng: v.locationLng ?? "",
+        }))
+      );
+    }
+    if (checkedCategories.has("radio")) {
+      addSheet(
+        "Radio Sessions",
+        demoRadioSessions.map((s) => ({
+          AirDate: s.airDate,
+          Topic: s.topic,
+          Speaker: s.guestSpeaker ?? "",
+          Org: s.guestOrganization ?? "",
+          Sector: s.sector,
+        }))
+      );
+      addSheet(
+        "Radio Winners",
+        demoRadioWinners.map((w) => ({
+          Name: w.name,
+          Village: w.village,
+          Sector: w.sector === "ifakara" ? "Msolwa" : "Usangu",
+          Gender: w.gender,
+          SessionDate: w.sessionDate ?? "",
+          Prize: w.prize ?? "",
+        }))
+      );
+    }
+    if (checkedCategories.has("climate")) {
+      addSheet(
+        "Weather",
+        demoWeatherData.map((w) => ({
+          Ward: w.wardName,
+          Date: w.date,
+          RainfallMm: w.rainfallMm ?? "",
+          TempMaxC: w.tempMaxC ?? "",
+          TempMinC: w.tempMinC ?? "",
+          DroughtIndex: w.droughtIndex ?? "",
+        }))
+      );
+    }
+    return { wb, sheetsAdded, rowsTotal };
+  };
+
+  const handleExport = async (format: string) => {
+    if (checkedCategories.size === 0) {
+      toast.error("Pick at least one data category to export");
+      return;
+    }
+    setExporting(true);
+    try {
+      const { wb, sheetsAdded, rowsTotal } = buildWorkbook();
+      if (sheetsAdded === 0) {
+        toast.error("Nothing to export — the selected categories have no data");
+        return;
+      }
+      const today = new Date().toISOString().split("T")[0];
+      const ext = format === "csv" ? "csv" : "xlsx";
+      const bookType: "xlsx" | "csv" = ext === "csv" ? "csv" : "xlsx";
+      const safeQuarter = selectedQuarter.replace(/\s+/g, "_");
+      const filename = `Six_Rivers_Export_${safeQuarter}_${today}.${ext}`;
+      XLSX.writeFile(wb, filename, { bookType });
+      toast.success("Export complete", {
+        description: `${sheetsAdded} sheet${sheetsAdded === 1 ? "" : "s"} · ${rowsTotal} rows · ${filename}`,
+      });
+    } catch (err) {
+      toast.error("Export failed", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (

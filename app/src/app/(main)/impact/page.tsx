@@ -34,6 +34,8 @@ import {
   demoCropCycles,
   demoFieldVisits,
   demoNurseries,
+  demoIGAGroups,
+  demoEcoClubs,
   survivalBySpecies,
   monthlyDistributions,
 } from "@/lib/demo-data";
@@ -92,11 +94,72 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
-function downloadReport() {
+interface ReportOptions {
+  period?: string;
+  aiHighlights?: string[]; // if provided, replaces the templated ones
+  saveFile?: boolean; // default true — if false, returns base64 for emailing
+}
+
+function buildReport(opts: ReportOptions = {}): string | void {
+  const period = opts.period ?? "January – March 2026";
   const activeFences = demoChilliFences.filter((f) => f.status === "active").length;
   const activeGroups = demoShambachunguGroups.filter((g) => g.status === "active").length;
   const totalMembers = demoShambachunguGroups.reduce((s, g) => s + g.memberCount, 0);
   const hortFarmers = demoFarmers.filter((f) => f.farmingApproach.includes("horticulture")).length;
+
+  // Gender + IGA + farmer lifecycle computations (used in new sections)
+  const ecoMale = demoEcoClubs.reduce((s, c) => s + c.maleCount, 0);
+  const ecoFemale = demoEcoClubs.reduce((s, c) => s + c.femaleCount, 0);
+  const igaMale = demoIGAGroups.reduce((s, g) => s + g.maleCount, 0);
+  const igaFemale = demoIGAGroups.reduce((s, g) => s + g.femaleCount, 0);
+  const igaActive = demoIGAGroups.filter((g) => g.status === "active").length;
+  const igaStruggling = demoIGAGroups.filter((g) => g.status === "struggling").length;
+  const igaInactive = demoIGAGroups.filter((g) => g.status === "inactive").length;
+  const igaTotalCapital = demoIGAGroups.reduce((s, g) => s + g.currentCapitalTSh, 0);
+  const igaTotalRevenue = demoIGAGroups.reduce((s, g) => s + g.revenueTSh, 0);
+  const igaTotalExpense = demoIGAGroups.reduce((s, g) => s + g.expenseTSh, 0);
+  const igaTopRevenue = [...demoIGAGroups].sort((a, b) => b.revenueTSh - a.revenueTSh).slice(0, 3);
+  const igaBottomNet = [...demoIGAGroups]
+    .map((g) => ({ ...g, net: g.revenueTSh - g.expenseTSh }))
+    .sort((a, b) => a.net - b.net)
+    .slice(0, 3);
+  const droppedFarmers = demoFarmers.filter((f) => !f.isActive);
+  const activeFarmers = demoFarmers.length - droppedFarmers.length;
+  const totalTreesPlanted = demoFarmers.reduce((s, f) => s + f.totalTreesPlanted, 0);
+  const totalTreesSurviving = demoFarmers.reduce((s, f) => s + f.treesSurviving, 0);
+  // Field visit officers
+  const officerMap = demoFieldVisits.reduce<Record<string, { count: number; villages: string[]; types: string[] }>>((acc, v) => {
+    const key = v.userName;
+    if (!acc[key]) acc[key] = { count: 0, villages: [], types: [] };
+    acc[key].count++;
+    acc[key].villages.push(v.villageName);
+    acc[key].types.push(v.visitType);
+    return acc;
+  }, {});
+  const officerRows = Object.entries(officerMap).map(([name, data]) => {
+    const topVillage = mode(data.villages);
+    const topType = mode(data.types).replace(/_/g, " ");
+    return { name, visits: data.count, topVillage, topType };
+  });
+
+  function mode<T>(arr: T[]): T {
+    const counts = new Map<T, number>();
+    arr.forEach((a) => counts.set(a, (counts.get(a) ?? 0) + 1));
+    let best: T = arr[0];
+    let max = 0;
+    counts.forEach((v, k) => {
+      if (v > max) {
+        max = v;
+        best = k;
+      }
+    });
+    return best;
+  }
+  function fmtTSh(n: number): string {
+    if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M TSh`;
+    if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(0)}K TSh`;
+    return `${n} TSh`;
+  }
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const w = doc.internal.pageSize.getWidth();
@@ -162,7 +225,7 @@ function downloadReport() {
   doc.text("Community Programme Report", 14, 28);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("Reporting Period: January \u2013 March 2026", 14, 35);
+  doc.text(`Reporting Period: ${period}`, 14, 35);
   doc.setFontSize(9);
   doc.setTextColor(...gold);
   doc.text(`Generated: ${new Date().toLocaleDateString()}`, w - 14, 35, { align: "right" });
@@ -221,10 +284,158 @@ function downloadReport() {
   });
   y += 4;
 
+  // === GENDER BREAKDOWN ===
+  checkPage(45);
+  sectionTitle("Gender Breakdown");
+  doc.setFillColor(240, 240, 240);
+  doc.rect(14, y - 4, w - 28, 7, "F");
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...navy);
+  doc.text("Programme", 16, y);
+  doc.text("Male", 90, y);
+  doc.text("Female", 120, y);
+  doc.text("Total", 150, y);
+  y += 7;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...black);
+  const genderRows: Array<[string, number, number]> = [
+    ["Eco Club students", ecoMale, ecoFemale],
+    ["IGA group members", igaMale, igaFemale],
+  ];
+  genderRows.forEach(([name, m, f], i) => {
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 248, 248);
+      doc.rect(14, y - 4, w - 28, 6, "F");
+    }
+    doc.setFontSize(9);
+    doc.text(name, 16, y);
+    doc.text(String(m), 90, y);
+    doc.text(String(f), 120, y);
+    doc.text(String(m + f), 150, y);
+    y += 6;
+  });
+  doc.setFont("helvetica", "bold");
+  doc.setFillColor(232, 238, 246);
+  doc.rect(14, y - 4, w - 28, 6, "F");
+  doc.text("All participants", 16, y);
+  doc.text(String(ecoMale + igaMale), 90, y);
+  doc.text(String(ecoFemale + igaFemale), 120, y);
+  doc.text(String(ecoMale + igaMale + ecoFemale + igaFemale), 150, y);
+  y += 10;
+  doc.setFont("helvetica", "normal");
+
+  // === IGA PORTFOLIO ===
+  checkPage(95);
+  sectionTitle("IGA Portfolio");
+  kv("Active / Struggling / Inactive", `${igaActive} / ${igaStruggling} / ${igaInactive}`);
+  kv("Total current capital", fmtTSh(igaTotalCapital));
+  kv("Total revenue this round", fmtTSh(igaTotalRevenue));
+  kv("Total expenses", fmtTSh(igaTotalExpense));
+  kv("Net position", fmtTSh(igaTotalRevenue - igaTotalExpense));
+  y += 2;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...navy);
+  doc.text("Top 3 groups by revenue", 14, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...black);
+  igaTopRevenue.forEach((g) => {
+    checkPage(6);
+    doc.setFontSize(9);
+    doc.text(`• ${g.name} (${g.villageName})`, 16, y);
+    doc.text(fmtTSh(g.revenueTSh), 140, y);
+    y += 5;
+  });
+  y += 2;
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...navy);
+  doc.text("Bottom 3 by net position", 14, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...black);
+  igaBottomNet.forEach((g) => {
+    checkPage(6);
+    doc.setFontSize(9);
+    const clr: [number, number, number] = g.net >= 0 ? [33, 33, 33] : [198, 40, 40];
+    doc.text(`• ${g.name} (${g.villageName})`, 16, y);
+    doc.setTextColor(...clr);
+    doc.text(fmtTSh(g.net), 140, y);
+    doc.setTextColor(...black);
+    y += 5;
+  });
+  y += 4;
+
+  // === FARMER LIFECYCLE ===
+  checkPage(70);
+  sectionTitle("Farmer Lifecycle");
+  kv("Active farmers", `${activeFarmers} of ${demoFarmers.length} (${Math.round((activeFarmers / demoFarmers.length) * 100)}%)`);
+  kv("Dropped out", `${droppedFarmers.length} (${Math.round((droppedFarmers.length / demoFarmers.length) * 100)}%)`);
+  kv("Trees planted", totalTreesPlanted.toLocaleString());
+  kv("Trees surviving", `${totalTreesSurviving.toLocaleString()} (${totalTreesPlanted > 0 ? Math.round((totalTreesSurviving / totalTreesPlanted) * 100) : 0}% survival)`);
+  y += 2;
+  if (droppedFarmers.length > 0) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...navy);
+    doc.text("Recent dropouts", 14, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...black);
+    droppedFarmers.slice(0, 3).forEach((f) => {
+      checkPage(12);
+      doc.setFontSize(9);
+      doc.text(`• ${f.name} — ${f.villageName} (${f.droppedOutAt ?? "-"})`, 16, y);
+      y += 4;
+      if (f.dropoutReason) {
+        doc.setTextColor(...gray);
+        const lines = doc.splitTextToSize(`  ${f.dropoutReason}`, w - 40);
+        lines.forEach((line: string) => {
+          doc.text(line, 16, y);
+          y += 4;
+        });
+        doc.setTextColor(...black);
+      }
+      y += 1;
+    });
+  }
+  y += 2;
+
+  // === FIELD VISIT ACTIVITY ===
+  checkPage(40);
+  sectionTitle("Field Visit Activity");
+  doc.setFillColor(240, 240, 240);
+  doc.rect(14, y - 4, w - 28, 7, "F");
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...navy);
+  doc.text("Officer", 16, y);
+  doc.text("Visits", 70, y);
+  doc.text("Top village", 95, y);
+  doc.text("Top activity", 140, y);
+  y += 7;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...black);
+  officerRows.forEach((r, i) => {
+    checkPage(6);
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 248, 248);
+      doc.rect(14, y - 4, w - 28, 6, "F");
+    }
+    doc.setFontSize(9);
+    doc.text(r.name, 16, y);
+    doc.text(String(r.visits), 70, y);
+    doc.text(r.topVillage, 95, y);
+    doc.text(r.topType, 140, y);
+    y += 6;
+  });
+  y += 4;
+
   // === KEY HIGHLIGHTS ===
   checkPage(50);
   sectionTitle("Key Highlights");
-  const highlights = [
+  const defaultHighlights = [
     `${activeFences} active chilli fences with ${demoKPIs.elephantDeterrenceSuccessRate}% elephant deterrence success rate`,
     `Cocoa agroforestry in year 3 for pilot farmers (${survivalBySpecies.find((s) => s.species === "Cocoa")?.rate}% survival)`,
     `${activeGroups} shambachungu groups active with ${totalMembers} total members`,
@@ -232,6 +443,10 @@ function downloadReport() {
     `Dry season planting losses identified \u2014 replanting for April rains in progress`,
     `${demoKPIs.fieldVisitsThisMonth} field visits conducted, 100% synced to platform`,
   ];
+  const highlights =
+    opts.aiHighlights && opts.aiHighlights.length > 0
+      ? opts.aiHighlights
+      : defaultHighlights;
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   highlights.forEach((h) => {
@@ -291,7 +506,21 @@ function downloadReport() {
     doc.text(`Powered by 7Square Inc.  |  Page ${i} of ${pages}`, w - 14, 293, { align: "right" });
   }
 
-  doc.save("Six_Rivers_Q1_2026_Report.pdf");
+  const filename = `Six_Rivers_Report_${period.replace(/[^\w]+/g, "_")}.pdf`;
+  if (opts.saveFile !== false) {
+    doc.save(filename);
+    return;
+  }
+  // Return a base64 data string (useful for emailing the PDF)
+  const dataUri = doc.output("datauristring");
+  // Strip `data:application/pdf;filename=...;base64,` prefix
+  const comma = dataUri.indexOf(",");
+  return comma >= 0 ? dataUri.slice(comma + 1) : dataUri;
+}
+
+// Convenience wrapper that matches the old signature so existing callers keep working
+function downloadReport(): void {
+  buildReport();
 }
 
 export default function ImpactPage() {
@@ -300,6 +529,50 @@ export default function ImpactPage() {
   const totalMembers = demoShambachunguGroups.reduce((s, g) => s + g.memberCount, 0);
   const hortFarmers = demoFarmers.filter((f) => f.farmingApproach.includes("horticulture")).length;
   const [sending, setSending] = useState<"edna" | "team" | null>(null);
+  const [period, setPeriod] = useState<string>("January – March 2026 (Q1)");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  async function downloadAIEnhancedPDF() {
+    setAiLoading(true);
+    const toastId = toast.loading("Asking the AI to write key highlights...");
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: "", mode: "highlights" }),
+      });
+      const data = await res.json();
+      toast.dismiss(toastId);
+      if (!res.ok) {
+        toast.error("AI highlights failed — using templated highlights", {
+          description: data.error ?? "",
+        });
+        buildReport({ period });
+        return;
+      }
+      // Parse "• Bullet text" lines back into an array
+      const ai = typeof data.answer === "string" ? data.answer : "";
+      const bullets = ai
+        .split("\n")
+        .map((l: string) => l.replace(/^[•\-*\s]+/, "").trim())
+        .filter((l: string) => l.length > 0);
+      if (bullets.length === 0) {
+        toast.error("AI returned no highlights — using templated ones");
+        buildReport({ period });
+        return;
+      }
+      toast.success(`Generating PDF with ${bullets.length} AI-written highlights`);
+      buildReport({ period, aiHighlights: bullets });
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error("Could not generate AI highlights", {
+        description: err instanceof Error ? err.message : "Network error",
+      });
+      buildReport({ period });
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   async function sendReportTo(recipient: "edna" | "team") {
     setSending(recipient);
@@ -319,7 +592,7 @@ export default function ImpactPage() {
         body: JSON.stringify({
           to: recipient,
           reportTitle: "Six Rivers Community Programme — Impact Snapshot",
-          reportPeriod: "Q1 2026 (January – March)",
+          reportPeriod: period,
           summary,
           kpis: {
             "Farmers engaged": demoKPIs.totalFarmers,
@@ -380,14 +653,35 @@ export default function ImpactPage() {
             <BarChart3 className="h-5 w-5 text-primary" />
             <h2 className="font-semibold">Programme Impact Summary</h2>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+              aria-label="Reporting period"
+            >
+              <option>January – March 2026 (Q1)</option>
+              <option>October – December 2025 (Q4)</option>
+              <option>July – September 2025 (Q3)</option>
+              <option>Full Year 2025–2026</option>
+            </select>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCSV}>
               <Download className="h-4 w-4" />
               Export CSV
             </Button>
-            <Button size="sm" className="gap-1.5" onClick={downloadReport}>
+            <Button size="sm" className="gap-1.5" onClick={() => buildReport({ period })}>
               <FileText className="h-4 w-4" />
-              Generate Quarterly PDF
+              Generate PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 border-accent text-accent hover:bg-accent/5"
+              onClick={downloadAIEnhancedPDF}
+              disabled={aiLoading}
+            >
+              {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+              Generate AI-enhanced PDF
             </Button>
             <Button
               variant="outline"
@@ -554,7 +848,7 @@ export default function ImpactPage() {
                 </ul>
               </div>
             </div>
-            <Button className="self-end gap-1.5" onClick={downloadReport}>
+            <Button className="self-end gap-1.5" onClick={() => buildReport({ period })}>
               <Download className="h-4 w-4" />
               Download as PDF
             </Button>
