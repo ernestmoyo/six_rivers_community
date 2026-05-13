@@ -15,6 +15,7 @@ create unique index if not exists iga_financial_updates_csid_uniq
   on iga_financial_updates (client_submission_id) where client_submission_id is not null;
 
 -- ─── Photo arrays ──────────────────────────────────────────────────
+alter table if exists field_visits     add column if not exists photos     text[] default '{}'::text[];
 alter table if exists cattle_incidents add column if not exists photo_urls text[] default '{}'::text[];
 alter table if exists survival_checks  add column if not exists photo_urls text[] default '{}'::text[];
 
