@@ -12,20 +12,25 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Beef, MapPin, Loader2, Send, AlertTriangle } from "lucide-react";
 import { demoVillages } from "@/lib/demo-data";
+import { useOfficer } from "@/lib/officer";
+import { submitWithOfflineFallback } from "@/lib/offline-queue";
+import { uploadOrQueuePhotos } from "@/lib/photos";
+import { VillagePicker } from "@/components/shared/village-picker";
+import { PhotoInput } from "@/components/shared/photo-input";
 
 export default function SubmitCattleIncidentPage() {
   const router = useRouter();
-  const usanguVillages = demoVillages.filter((v) => v.sector === "mbarali");
+  const { officer } = useOfficer();
 
   const [villageId, setVillageId] = useState("");
-  const [officerName, setOfficerName] = useState("");
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     if (sp.get("village")) setVillageId(sp.get("village") ?? "");
-    if (sp.get("officer")) setOfficerName(sp.get("officer") ?? "");
   }, []);
+
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
@@ -48,52 +53,56 @@ export default function SubmitCattleIncidentPage() {
         setGpsError(
           err.code === 1
             ? "Location access denied — enable in phone settings"
-            : "Unable to get location — try again"
+            : "Unable to get location — try again",
         );
         setGpsLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const village = usanguVillages.find((v) => v.id === Number(villageId));
+    const village = demoVillages.find((v) => v.id === Number(villageId));
 
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/cattle-incidents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          villageId: village?.id ?? null,
-          villageName: village?.name ?? null,
-          incidentType: fd.get("incidentType"),
-          severity: fd.get("severity"),
-          date: fd.get("date"),
-          estimatedHerdSize: fd.get("herdSize") ? Number(fd.get("herdSize")) : null,
-          description: (fd.get("description") as string) || null,
-          locationLat: gps?.lat ?? null,
-          locationLng: gps?.lng ?? null,
-          reportedBy: officerName || "Field Officer",
-          notifyEmail: true,
-        }),
+      const photoUrls = await uploadOrQueuePhotos(photoFiles, "cattle-incident");
+      const clientSubmissionId = crypto.randomUUID();
+      const result = await submitWithOfflineFallback("/api/cattle-incidents", {
+        clientSubmissionId,
+        officerId: officer?.id,
+        villageId: village?.id ?? null,
+        villageName: village?.name ?? null,
+        incidentType: fd.get("incidentType"),
+        severity: fd.get("severity"),
+        date: fd.get("date"),
+        estimatedHerdSize: fd.get("herdSize") ? Number(fd.get("herdSize")) : null,
+        description: (fd.get("description") as string) || null,
+        locationLat: gps?.lat ?? null,
+        locationLng: gps?.lng ?? null,
+        photoUrls,
+        reportedBy: officer?.name ?? "Field Officer",
+        notifyEmail: true,
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Unknown error" }));
+      if (result.queued) {
+        toast.info("Saved offline — will sync when online");
+      } else if (!result.response.ok) {
+        const data = await result.response.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(data.error ?? "Could not save");
+      } else {
+        const data = await result.response.json();
+        const emailNote = data?.email?.sent ? " · email alert sent" : "";
+        toast.success("Cattle incident reported!", {
+          description: `Saved to database${emailNote}`,
+        });
       }
-      const data = await res.json();
-      const emailNote = data?.email?.sent ? " · email alert sent" : "";
-      toast.success("Cattle incident reported!", {
-        description: `Saved to database${emailNote}`,
-      });
 
       router.push(
-        `/submit/done?kind=cattle-incident&village=${encodeURIComponent(village?.name ?? "")}`
+        `/submit/done?kind=cattle-incident&village=${encodeURIComponent(village?.name ?? "")}`,
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Submission failed";
@@ -131,14 +140,10 @@ export default function SubmitCattleIncidentPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="officer">Your name *</Label>
-              <Input
-                id="officer"
-                required
-                placeholder="e.g. Lilian Mihambo"
-                value={officerName}
-                onChange={(e) => setOfficerName(e.target.value)}
-              />
+              <Label>Officer</Label>
+              <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm">
+                {officer?.name ?? "(set up profile)"}
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -154,20 +159,12 @@ export default function SubmitCattleIncidentPage() {
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="village">Village *</Label>
-              <select
-                id="village"
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              <VillagePicker
                 value={villageId}
-                onChange={(e) => setVillageId(e.target.value)}
-              >
-                <option value="">Select village...</option>
-                {usanguVillages.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name} ({v.wardName})
-                  </option>
-                ))}
-              </select>
+                onChange={setVillageId}
+                required
+                sector="mbarali"
+              />
             </div>
 
             <div className="flex flex-col gap-2">
@@ -239,6 +236,10 @@ export default function SubmitCattleIncidentPage() {
                 placeholder="Describe the incident: what happened, how many cattle, any damage..."
                 rows={4}
               />
+            </div>
+
+            <div className="sm:col-span-2">
+              <PhotoInput value={photoFiles} onChange={setPhotoFiles} label="Photo evidence (optional)" />
             </div>
 
             {error && (

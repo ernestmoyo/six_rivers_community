@@ -33,8 +33,7 @@ import {
 } from "@/lib/demo-data";
 import { SEVERITY_LEVELS } from "@/lib/constants";
 import { useLiveKPIs } from "@/lib/useLiveKPIs";
-// AskTheData import PARKED — re-enable alongside the render below
-// import { AskTheData } from "@/components/shared/ask-the-data";
+import { AskTheData } from "@/components/shared/ask-the-data";
 import {
   BarChart,
   Bar,
@@ -84,8 +83,7 @@ export default function DashboardPage() {
       />
 
       <div className="flex flex-col gap-6 p-6">
-        {/* AI assistant — PARKED. To re-enable, uncomment the next line. See docs/ai-parked.md */}
-        {/* <AskTheData /> */}
+        <AskTheData />
 
         {live.hasAnyLiveData && (
           <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-xs text-green-800">

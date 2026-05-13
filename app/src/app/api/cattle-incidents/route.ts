@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { idempotentInsert } from "@/lib/idempotency";
 
 interface CattleIncidentPayload {
+  clientSubmissionId?: string;
+  officerId?: string;
   villageId?: number | null;
   villageName?: string | null;
   incidentType: string;
@@ -11,6 +14,7 @@ interface CattleIncidentPayload {
   description?: string | null;
   locationLat?: number | null;
   locationLng?: number | null;
+  photoUrls?: string[];
   reportedBy?: string;
   notifyEmail?: boolean;
 }
@@ -41,32 +45,33 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as CattleIncidentPayload;
 
-    // 1. Save to Supabase
-    const { data, error } = await supabase
-      .from("cattle_incidents")
-      .insert([
-        {
-          village_id: body.villageId ?? null,
-          village_name: body.villageName ?? null,
-          incident_type: body.incidentType,
-          severity: body.severity,
-          incident_date: body.date,
-          estimated_herd: body.estimatedHerdSize ?? null,
-          description: body.description ?? null,
-          location_lat: body.locationLat ?? null,
-          location_lng: body.locationLng ?? null,
-          reported_by: body.reportedBy ?? "Field Officer",
-        },
-      ])
-      .select();
+    const result = await idempotentInsert<{ id: number }>(
+      supabase,
+      "cattle_incidents",
+      {
+        village_id: body.villageId ?? null,
+        village_name: body.villageName ?? null,
+        incident_type: body.incidentType,
+        severity: body.severity,
+        incident_date: body.date,
+        estimated_herd: body.estimatedHerdSize ?? null,
+        description: body.description ?? null,
+        location_lat: body.locationLat ?? null,
+        location_lng: body.locationLng ?? null,
+        photo_urls: body.photoUrls ?? [],
+        officer_id: body.officerId ?? null,
+        reported_by: body.reportedBy ?? "Field Officer",
+      },
+      body.clientSubmissionId,
+    );
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (result.error) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
-    // 2. Fire email notification (best-effort — don't fail the insert if email breaks)
+    // Fire email notification only for fresh inserts (don't re-email replays).
     let emailStatus: { sent: boolean; error?: string } = { sent: false };
-    if (body.notifyEmail !== false) {
+    if (!result.duplicate && body.notifyEmail !== false) {
       try {
         const origin = req.nextUrl.origin;
         const emailRes = await fetch(`${origin}/api/cattle-notify`, {
@@ -84,13 +89,11 @@ export async function POST(req: NextRequest) {
         });
         if (emailRes.ok) {
           emailStatus = { sent: true };
-          // Mark email_sent=true in DB
-          const inserted = data?.[0];
-          if (inserted?.id) {
+          if (result.row?.id) {
             await supabase
               .from("cattle_incidents")
               .update({ email_sent: true })
-              .eq("id", inserted.id);
+              .eq("id", result.row.id);
           }
         } else {
           const emailErr = await emailRes.json().catch(() => ({ error: "Unknown" }));
@@ -102,8 +105,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      incident: data?.[0] ?? null,
+      incident: result.row,
       email: emailStatus,
+      duplicate: result.duplicate,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";

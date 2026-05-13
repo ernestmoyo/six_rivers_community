@@ -1,0 +1,22 @@
+# Bubblewrap output
+twa-manifest.json
+app/
+gradle/
+build/
+app-release-bundle.aab
+app-release-signed.apk
+app-release-unsigned-aligned.apk
+output-metadata.json
+
+# Signing material — NEVER commit these.
+*.jks
+*.keystore
+*.pepk
+keystore.json
+
+# Local working files
+gradlew
+gradlew.bat
+gradle-wrapper.properties
+.gradle/
+local.properties

@@ -1,5 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { idempotentInsert } from "@/lib/idempotency";
+
+interface FieldVisitPayload {
+  clientSubmissionId?: string;
+  officerId?: string;
+  userName?: string;
+  villageId: number;
+  villageName: string;
+  visitDate: string;
+  visitType: string;
+  locationLat?: number | null;
+  locationLng?: number | null;
+  notes?: string;
+  photos?: string[];
+}
 
 export async function GET() {
   if (!supabase) {
@@ -25,26 +40,31 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
+    const body = (await req.json()) as FieldVisitPayload;
 
-    const { data, error } = await supabase.from("field_visits").insert([
+    const result = await idempotentInsert(
+      supabase,
+      "field_visits",
       {
         user_name: body.userName || "Field Officer",
+        officer_id: body.officerId ?? null,
         village_id: body.villageId,
         village_name: body.villageName,
         visit_date: body.visitDate,
         visit_type: body.visitType,
-        location_lat: body.locationLat || null,
-        location_lng: body.locationLng || null,
+        location_lat: body.locationLat ?? null,
+        location_lng: body.locationLng ?? null,
         notes: body.notes || "",
+        photos: body.photos ?? [],
       },
-    ]).select();
+      body.clientSubmissionId,
+    );
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (result.error) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
-    return NextResponse.json(data?.[0] ?? { success: true });
+    return NextResponse.json({ ...(result.row ?? { success: true }), duplicate: result.duplicate });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

@@ -14,24 +14,26 @@ import { Briefcase, Loader2, Send, Coins } from "lucide-react";
 import { demoIGAGroups } from "@/lib/demo-data";
 import { IGA_STARTUP_CAPITAL_TSH } from "@/lib/constants";
 import type { IGAGroupStatus } from "@/types";
+import { useOfficer } from "@/lib/officer";
+import { submitWithOfflineFallback } from "@/lib/offline-queue";
 
 export default function SubmitIGAUpdatePage() {
   const router = useRouter();
+  const { officer } = useOfficer();
+
   const [groupId, setGroupId] = useState("");
-  const [officerName, setOfficerName] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     if (sp.get("group")) setGroupId(sp.get("group") ?? "");
-    if (sp.get("officer")) setOfficerName(sp.get("officer") ?? "");
   }, []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedGroup = useMemo(
     () => demoIGAGroups.find((g) => g.id === Number(groupId)),
-    [groupId]
+    [groupId],
   );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -45,31 +47,33 @@ export default function SubmitIGAUpdatePage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/iga-updates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          groupId: selectedGroup.id,
-          groupName: selectedGroup.name,
-          currentCapitalTSh: Number(fd.get("currentCapital")),
-          revenueTSh: Number(fd.get("revenue")),
-          expenseTSh: Number(fd.get("expense")),
-          status: fd.get("status") as IGAGroupStatus,
-          notes: (fd.get("notes") as string) || null,
-          reportedBy: officerName || "Group Leader",
-        }),
+      const clientSubmissionId = crypto.randomUUID();
+      const result = await submitWithOfflineFallback("/api/iga-updates", {
+        clientSubmissionId,
+        officerId: officer?.id,
+        groupId: selectedGroup.id,
+        groupName: selectedGroup.name,
+        currentCapitalTSh: Number(fd.get("currentCapital")),
+        revenueTSh: Number(fd.get("revenue")),
+        expenseTSh: Number(fd.get("expense")),
+        status: fd.get("status") as IGAGroupStatus,
+        notes: (fd.get("notes") as string) || null,
+        reportedBy: officer?.name ?? "Group Leader",
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Unknown error" }));
+      if (result.queued) {
+        toast.info("Saved offline — will sync when online");
+      } else if (!result.response.ok) {
+        const data = await result.response.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(data.error ?? "Could not save");
+      } else {
+        toast.success(`Update saved for ${selectedGroup.name}`, {
+          description: "Group portfolio refreshed in the dashboard",
+        });
       }
-      toast.success(`Update saved for ${selectedGroup.name}`, {
-        description: "Group portfolio refreshed in the dashboard",
-      });
 
       router.push(
-        `/submit/done?kind=iga-update&group=${encodeURIComponent(selectedGroup.name)}`
+        `/submit/done?kind=iga-update&group=${encodeURIComponent(selectedGroup.name)}`,
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Submission failed";
@@ -110,14 +114,10 @@ export default function SubmitIGAUpdatePage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="officer">Your name *</Label>
-              <Input
-                id="officer"
-                required
-                placeholder="e.g. group leader name"
-                value={officerName}
-                onChange={(e) => setOfficerName(e.target.value)}
-              />
+              <Label>Reported by</Label>
+              <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm">
+                {officer?.name ?? "(set up profile)"}
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">

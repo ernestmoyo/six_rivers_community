@@ -531,49 +531,47 @@ export default function ImpactPage() {
   const [sending, setSending] = useState<"edna" | "team" | null>(null);
   const [period, setPeriod] = useState<string>("January – March 2026 (Q1)");
 
-  // PARKED — AI-enhanced PDF. Re-enable by restoring this block, the
-  // aiLoading state, and the button in the toolbar. See docs/ai-parked.md
-  // const [aiLoading, setAiLoading] = useState(false);
-  // async function downloadAIEnhancedPDF() {
-  //   setAiLoading(true);
-  //   const toastId = toast.loading("Asking the AI to write key highlights...");
-  //   try {
-  //     const res = await fetch("/api/ai", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ question: "", mode: "highlights" }),
-  //     });
-  //     const data = await res.json();
-  //     toast.dismiss(toastId);
-  //     if (!res.ok) {
-  //       toast.error("AI highlights failed — using templated highlights", {
-  //         description: data.error ?? "",
-  //       });
-  //       buildReport({ period });
-  //       return;
-  //     }
-  //     const ai = typeof data.answer === "string" ? data.answer : "";
-  //     const bullets = ai
-  //       .split("\n")
-  //       .map((l: string) => l.replace(/^[•\-*\s]+/, "").trim())
-  //       .filter((l: string) => l.length > 0);
-  //     if (bullets.length === 0) {
-  //       toast.error("AI returned no highlights — using templated ones");
-  //       buildReport({ period });
-  //       return;
-  //     }
-  //     toast.success(`Generating PDF with ${bullets.length} AI-written highlights`);
-  //     buildReport({ period, aiHighlights: bullets });
-  //   } catch (err) {
-  //     toast.dismiss(toastId);
-  //     toast.error("Could not generate AI highlights", {
-  //       description: err instanceof Error ? err.message : "Network error",
-  //     });
-  //     buildReport({ period });
-  //   } finally {
-  //     setAiLoading(false);
-  //   }
-  // }
+  const [aiLoading, setAiLoading] = useState(false);
+  async function downloadAIEnhancedPDF() {
+    setAiLoading(true);
+    const toastId = toast.loading("Asking the AI to write key highlights...");
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: "", mode: "highlights" }),
+      });
+      const data = await res.json();
+      toast.dismiss(toastId);
+      if (!res.ok) {
+        toast.error("AI highlights failed — using templated highlights", {
+          description: data.error ?? "",
+        });
+        buildReport({ period });
+        return;
+      }
+      const ai = typeof data.answer === "string" ? data.answer : "";
+      const bullets = ai
+        .split("\n")
+        .map((l: string) => l.replace(/^[•\-*\s]+/, "").trim())
+        .filter((l: string) => l.length > 0);
+      if (bullets.length === 0) {
+        toast.error("AI returned no highlights — using templated ones");
+        buildReport({ period });
+        return;
+      }
+      toast.success(`Generating PDF with ${bullets.length} AI-written highlights`);
+      buildReport({ period, aiHighlights: bullets });
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error("Could not generate AI highlights", {
+        description: err instanceof Error ? err.message : "Network error",
+      });
+      buildReport({ period });
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   async function sendReportTo(recipient: "edna" | "team") {
     setSending(recipient);
@@ -674,18 +672,16 @@ export default function ImpactPage() {
               <FileText className="h-4 w-4" />
               Generate PDF
             </Button>
-            {/* PARKED — AI-enhanced PDF button. See docs/ai-parked.md
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 border-accent text-accent hover:bg-accent/5"
+              className="gap-1.5"
               onClick={downloadAIEnhancedPDF}
               disabled={aiLoading}
             >
               {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-              Generate AI-enhanced PDF
+              AI-enhanced PDF
             </Button>
-            */}
             <Button
               variant="outline"
               size="sm"

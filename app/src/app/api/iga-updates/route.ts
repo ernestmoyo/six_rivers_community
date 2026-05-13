@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { idempotentInsert } from "@/lib/idempotency";
 
 interface IGAUpdatePayload {
+  clientSubmissionId?: string;
+  officerId?: string;
   groupId: number;
   groupName: string;
   currentCapitalTSh: number;
@@ -52,27 +55,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "groupId and groupName are required" }, { status: 400 });
     }
 
-    const { data, error } = await supabase
-      .from("iga_financial_updates")
-      .insert([
-        {
-          group_id: body.groupId,
-          group_name: body.groupName,
-          current_capital_tsh: body.currentCapitalTSh,
-          revenue_tsh: body.revenueTSh,
-          expense_tsh: body.expenseTSh,
-          status: body.status,
-          notes: body.notes ?? null,
-          reported_by: body.reportedBy ?? "Group Leader",
-        },
-      ])
-      .select();
+    const result = await idempotentInsert(
+      supabase,
+      "iga_financial_updates",
+      {
+        group_id: body.groupId,
+        group_name: body.groupName,
+        current_capital_tsh: body.currentCapitalTSh,
+        revenue_tsh: body.revenueTSh,
+        expense_tsh: body.expenseTSh,
+        status: body.status,
+        notes: body.notes ?? null,
+        officer_id: body.officerId ?? null,
+        reported_by: body.reportedBy ?? "Group Leader",
+      },
+      body.clientSubmissionId,
+    );
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (result.error) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
 
-    return NextResponse.json(data?.[0] ?? { success: true });
+    return NextResponse.json({ ...(result.row ?? { success: true }), duplicate: result.duplicate });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });

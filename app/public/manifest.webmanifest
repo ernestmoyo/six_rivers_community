@@ -1,13 +1,18 @@
 {
-  "name": "Six Rivers Community",
+  "id": "/?source=sixrivers-me",
+  "name": "Six Rivers M&E",
   "short_name": "Six Rivers",
-  "description": "Community intelligence platform for Six Rivers Africa",
+  "description": "Field-officer companion for the Six Rivers Africa community intelligence platform — forms, photos, and offline sync for farming, cattle, IGA, and SRATA Academy work in southern Tanzania.",
   "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#FAF9F5",
   "theme_color": "#071637",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "business", "utilities"],
   "icons": [
     { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
@@ -16,6 +21,12 @@
     { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
+    {
+      "name": "All Forms",
+      "short_name": "Forms",
+      "url": "/forms",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
     {
       "name": "Submit Field Visit",
       "short_name": "Visit",
@@ -29,10 +40,23 @@
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "IGA Financial Update",
+      "name": "IGA Update",
       "short_name": "IGA",
       "url": "/submit/iga-update",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "SRATA Enrollment",
+      "short_name": "Enroll",
+      "url": "/submit/srata-enrollment",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "SRATA Tracer",
+      "short_name": "Tracer",
+      "url": "/submit/srata-tracer",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }

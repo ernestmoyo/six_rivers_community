@@ -21,6 +21,8 @@ import {
   GraduationCap,
   Radio,
   Waves,
+  BookOpen,
+  FileText,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -53,7 +55,22 @@ const navigation = [
   { title: "IGA Groups", href: "/iga", icon: Briefcase },
   { title: "Eco Clubs", href: "/eco-clubs", icon: GraduationCap },
   { title: "Radio Programme", href: "/radio", icon: Radio },
+  {
+    title: "SRATA Academy",
+    href: "/srata",
+    icon: BookOpen,
+    children: [
+      { title: "Dashboard", href: "/srata" },
+      { title: "Cohorts", href: "/srata/cohorts" },
+      { title: "Students", href: "/srata/students" },
+      { title: "Internships", href: "/srata/internships" },
+      { title: "Graduates", href: "/srata/graduates" },
+      { title: "Employers", href: "/srata/employers" },
+      { title: "Reports", href: "/srata/reports" },
+    ],
+  },
   { title: "Field Collection", href: "/field/visit", icon: ClipboardList },
+  { title: "All Forms", href: "/forms", icon: FileText },
   { title: "Impact", href: "/impact", icon: BarChart3 },
   { title: "Climate", href: "/climate", icon: Cloud },
   { title: "Settings", href: "/settings", icon: Settings },

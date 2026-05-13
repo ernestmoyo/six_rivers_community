@@ -13,22 +13,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { ClipboardList, MapPin, Loader2, Send } from "lucide-react";
 import { demoVillages } from "@/lib/demo-data";
 import { VISIT_TYPES } from "@/lib/constants";
+import { useOfficer } from "@/lib/officer";
+import { submitWithOfflineFallback } from "@/lib/offline-queue";
+import { uploadOrQueuePhotos } from "@/lib/photos";
+import { VillagePicker } from "@/components/shared/village-picker";
+import { PhotoInput } from "@/components/shared/photo-input";
 
 export default function SubmitFieldVisitPage() {
   const router = useRouter();
+  const { officer } = useOfficer();
+
   const [locked, setLocked] = useState(false);
   const [visitType, setVisitType] = useState("");
   const [selectedVillageId, setSelectedVillageId] = useState("");
-  const [officerName, setOfficerName] = useState("");
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     if (sp.get("type")) setVisitType(sp.get("type") ?? "");
     if (sp.get("village")) setSelectedVillageId(sp.get("village") ?? "");
-    if (sp.get("officer")) setOfficerName(sp.get("officer") ?? "");
     if (sp.get("locked") === "1") setLocked(true);
   }, []);
+
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
@@ -51,11 +58,11 @@ export default function SubmitFieldVisitPage() {
         setGpsError(
           err.code === 1
             ? "Location access denied — enable in phone settings"
-            : "Unable to get location — try again"
+            : "Unable to get location — try again",
         );
         setGpsLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
@@ -67,32 +74,35 @@ export default function SubmitFieldVisitPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/field-visits", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userName: officerName || "Field Officer",
-          villageId: village?.id ?? 0,
-          villageName: village?.name ?? "Unknown",
-          visitDate: fd.get("date") as string,
-          visitType,
-          locationLat: gps?.lat ?? null,
-          locationLng: gps?.lng ?? null,
-          notes: (fd.get("notes") as string) || "",
-        }),
+      const photos = await uploadOrQueuePhotos(photoFiles, "field-visit");
+      const clientSubmissionId = crypto.randomUUID();
+      const result = await submitWithOfflineFallback("/api/field-visits", {
+        clientSubmissionId,
+        officerId: officer?.id,
+        userName: officer?.name ?? "Field Officer",
+        villageId: village?.id ?? 0,
+        villageName: village?.name ?? "Unknown",
+        visitDate: fd.get("date") as string,
+        visitType,
+        locationLat: gps?.lat ?? null,
+        locationLng: gps?.lng ?? null,
+        notes: (fd.get("notes") as string) || "",
+        photos,
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Unknown error" }));
+      if (result.queued) {
+        toast.info("Saved offline — will sync when online");
+      } else if (!result.response.ok) {
+        const data = await result.response.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(data.error ?? "Could not save");
+      } else {
+        toast.success("Field visit submitted!", {
+          description: `Saved to the central database · ${village?.name ?? ""}`,
+        });
       }
 
-      toast.success("Field visit submitted!", {
-        description: `Saved to the central database · ${village?.name ?? ""}`,
-      });
-
       router.push(
-        `/submit/done?kind=field-visit&village=${encodeURIComponent(village?.name ?? "")}`
+        `/submit/done?kind=field-visit&village=${encodeURIComponent(village?.name ?? "")}`,
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Submission failed";
@@ -123,14 +133,10 @@ export default function SubmitFieldVisitPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="officer">Your name *</Label>
-              <Input
-                id="officer"
-                required
-                placeholder="e.g. Justina Kizanye"
-                value={officerName}
-                onChange={(e) => setOfficerName(e.target.value)}
-              />
+              <Label>Officer</Label>
+              <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm">
+                {officer?.name ?? "(set up profile)"}
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -165,34 +171,12 @@ export default function SubmitFieldVisitPage() {
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="village">Village *</Label>
-              <select
-                id="village"
-                required
-                disabled={locked}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-60"
+              <VillagePicker
                 value={selectedVillageId}
-                onChange={(e) => setSelectedVillageId(e.target.value)}
-              >
-                <option value="">Select village...</option>
-                <optgroup label="Msolwa (Ifakara TC)">
-                  {demoVillages
-                    .filter((v) => v.sector === "ifakara")
-                    .map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} ({v.wardName})
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="Usangu (Mbarali DC)">
-                  {demoVillages
-                    .filter((v) => v.sector === "mbarali")
-                    .map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} ({v.wardName})
-                      </option>
-                    ))}
-                </optgroup>
-              </select>
+                onChange={setSelectedVillageId}
+                disabled={locked}
+                required
+              />
             </div>
 
             <div className="flex flex-col gap-2 sm:col-span-2">
@@ -227,6 +211,10 @@ export default function SubmitFieldVisitPage() {
                 placeholder="Describe what you observed, what was done, any recommendations..."
                 rows={4}
               />
+            </div>
+
+            <div className="sm:col-span-2">
+              <PhotoInput value={photoFiles} onChange={setPhotoFiles} label="Photos (optional)" />
             </div>
 
             {error && (
