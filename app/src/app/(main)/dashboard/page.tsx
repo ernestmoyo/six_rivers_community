@@ -33,7 +33,6 @@ import {
 } from "@/lib/demo-data";
 import { SEVERITY_LEVELS } from "@/lib/constants";
 import { useLiveKPIs } from "@/lib/useLiveKPIs";
-import { AskTheData } from "@/components/shared/ask-the-data";
 import {
   BarChart,
   Bar,
@@ -83,8 +82,6 @@ export default function DashboardPage() {
       />
 
       <div className="flex flex-col gap-6 p-6">
-        <AskTheData />
-
         {live.hasAnyLiveData && (
           <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-xs text-green-800">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500" />

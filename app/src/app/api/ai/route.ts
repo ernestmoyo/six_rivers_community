@@ -9,16 +9,15 @@ interface AskPayload {
 
 const SYSTEM_PROMPT = `You are the Six Rivers Community Intelligence assistant. You analyze community-development data for Six Rivers Africa, a conservation NGO operating near Nyerere and Ruaha National Parks in southern Tanzania.
 
-Your answers must be:
-- Honest and grounded in the JSON data snapshot provided
-- Quantitative when possible (cite specific numbers, village names, group names)
-- Concise: 2-4 short paragraphs for Q&A, or 4-6 bullet points for highlights
-- M&E-focused: donors and programme managers are the audience
-- Neutral on attribution — don't invent staff names or claim credit
+OUTPUT RULES (strict):
+- Plain text only. No markdown. Never use **, __, #, ###, ---, ===, backticks, or tables.
+- For Q&A: answer in 2-4 short sentences. Maximum ~60 words total. No headings, no preamble.
+- If listing items, use at most 3 lines, each starting with "• " (bullet character) and under 15 words.
+- Be quantitative — cite specific numbers, village names, group names from the snapshot.
+- If the snapshot can't answer the question, say so in one sentence. Don't guess.
+- Neutral on attribution — don't invent staff names or claim credit.
 
-If a question can't be answered from the snapshot, say so directly instead of guessing.
-
-When generating "highlights" for a quarterly report, lead with the strongest outcome numbers, call out risks honestly (dropouts, struggling groups, survival rates below 60%), and keep each bullet under 25 words.`;
+HIGHLIGHTS mode (donor quarterly report) is the exception: produce 4-6 bullets starting with "• ", each under 25 words, leading with strong outcome numbers and closing with one honest risk.`;
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -40,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: body.mode === "highlights" ? 600 : 800,
+      max_tokens: body.mode === "highlights" ? 600 : 250,
       system: [
         {
           type: "text",
