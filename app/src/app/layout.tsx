@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { InstallPrompt } from "@/components/shared/install-prompt";
+import { SwRegister } from "@/components/shared/sw-register";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,7 +33,6 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icons/icon.svg", type: "image/svg+xml" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
@@ -60,6 +61,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <Script id="sw-register-inline" strategy="afterInteractive">
+          {`if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function() {});
+              });
+            }`}
+        </Script>
+        <SwRegister />
         <InstallPrompt />
         <Toaster
           position="top-right"
