@@ -1,3 +1,21 @@
+// Six Rivers Community Intelligence Platform — Prisma schema
+//
+// This is the post-major-shift schema (2026-05-15). The original schema
+// (Region/District/Ward/Village/User/Farmer/SeedlingDistribution/...) is
+// preserved and extended with the new M&E spine:
+//
+//   - Programme taxonomy:  Pillar -> Programme -> Subprogramme -> Activity
+//                          -> ActivityVariant
+//   - Beneficiary spine:   Person, School, Group (+ temporal
+//                          GroupMembership), Enrollment, GroupTransaction
+//   - Location alias:      OperationalLocation layered over Village
+//   - Forms:               FormSchema + FormSubmission
+//   - Theory of Change:    TheoryOfChange + TocNode
+//   - Student portal:      StudentAccount (Phase 3)
+//
+// PostGIS Geography columns are added via Unsupported() so the columns exist
+// in the database; queries on them use prisma.$queryRaw or PostGIS functions.
+
 generator client {
   provider        = "prisma-client"
   output          = "../src/generated/prisma"
@@ -6,11 +24,10 @@ generator client {
 
 datasource db {
   provider   = "postgresql"
-  url        = env("DATABASE_URL")
   extensions = [postgis]
 }
 
-// ─── Geography (seeded from shapefiles) ─────────────────────────────
+// ─── Geography (seeded from shapefiles — canonical) ──────────────────
 
 model Region {
   id         Int        @id @default(autoincrement())
@@ -22,10 +39,10 @@ model Region {
 }
 
 model District {
-  id         Int      @id @default(autoincrement())
+  id         Int    @id @default(autoincrement())
   name       String
-  regionId   Int      @map("region_id")
-  region     Region   @relation(fields: [regionId], references: [id])
+  regionId   Int    @map("region_id")
+  region     Region @relation(fields: [regionId], references: [id])
   population Int?
   wards      Ward[]
 
@@ -33,46 +50,479 @@ model District {
 }
 
 model Ward {
-  id          Int           @id @default(autoincrement())
-  name        String
-  districtId  Int           @map("district_id")
-  district    District      @relation(fields: [districtId], references: [id])
-  population  Int?
-  villages    Village[]
-  weatherData WeatherData[]
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  districtId           Int                   @map("district_id")
+  district             District              @relation(fields: [districtId], references: [id])
+  population           Int?
+  villages             Village[]
+  weatherData          WeatherData[]
+  operationalLocations OperationalLocation[]
 
   @@map("wards")
 }
 
 model Village {
-  id              Int        @id @default(autoincrement())
-  name            String
-  wardId          Int        @map("ward_id")
-  ward            Ward       @relation(fields: [wardId], references: [id])
-  isOperational   Boolean    @default(false) @map("is_operational")
-  sector          String?    // 'psolo' | 'usangu_basin'
-  distanceToNpKm  Float?     @map("distance_to_np_km")
-  farmers         Farmer[]
-  nurseries       Nursery[]
-  cattleIncidents CattleIncident[]
-  fieldVisits     FieldVisit[]
+  id                   Int                   @id @default(autoincrement())
+  name                 String
+  wardId               Int                   @map("ward_id")
+  ward                 Ward                  @relation(fields: [wardId], references: [id])
+  isOperational        Boolean               @default(false) @map("is_operational")
+  sector               String? // 'msolwa' | 'usangu'
+  distanceToNpKm       Float?                @map("distance_to_np_km")
+  farmers              Farmer[]
+  nurseries            Nursery[]
+  cattleIncidents      CattleIncident[]
+  fieldVisits          FieldVisit[]
+  operationalLocations OperationalLocation[]
 
   @@map("villages")
 }
 
-// ─── Users & Auth ────────────────────────────────────────────────────
+// ─── Operational locations (what the team actually calls places) ─────
+
+enum OperationalLocationKind {
+  village
+  ward
+  hamlet
+}
+
+enum ReconciliationStatus {
+  matched
+  alias_override
+  missing_in_shapefile
+  decommissioned
+  split_disputed
+  pending
+}
+
+model OperationalLocation {
+  id                   Int                                    @id @default(autoincrement())
+  kind                 OperationalLocationKind
+  displayName          String                                 @map("display_name")
+  canonicalVillageId   Int?                                   @map("canonical_village_id")
+  canonicalVillage     Village?                               @relation(fields: [canonicalVillageId], references: [id])
+  canonicalWardId      Int?                                   @map("canonical_ward_id")
+  canonicalWard        Ward?                                  @relation(fields: [canonicalWardId], references: [id])
+  aliases              String[]                               @default([])
+  reconciliationStatus ReconciliationStatus                   @default(pending) @map("reconciliation_status")
+  notes                String?
+  lat                  Float?
+  lng                  Float?
+  // PostGIS Geography(Point,4326) — populated from lat/lng via trigger
+  geom                 Unsupported("geography(Point, 4326)")?
+  isOperational        Boolean                                @default(true) @map("is_operational")
+  sector               String? // 'msolwa' | 'usangu' | 'outreach'
+  createdById          Int?                                   @map("created_by_id")
+  createdBy            User?                                  @relation("OperationalLocationCreatedBy", fields: [createdById], references: [id])
+  reviewedById         Int?                                   @map("reviewed_by_id")
+  reviewedBy           User?                                  @relation("OperationalLocationReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt           DateTime?                              @map("reviewed_at")
+  createdAt            DateTime                               @default(now()) @map("created_at")
+  updatedAt            DateTime                               @updatedAt @map("updated_at")
+
+  persons         Person[]
+  groups          Group[]
+  schools         School[]
+  formSubmissions FormSubmission[]
+
+  @@index([reconciliationStatus])
+  @@index([sector])
+  @@map("operational_locations")
+}
+
+// ─── Programme taxonomy ──────────────────────────────────────────────
+
+enum BeneficiaryKind {
+  individual
+  group
+  school
+  mixed
+}
+
+enum SectorScope {
+  msolwa
+  usangu
+  both
+  outreach
+}
+
+model Pillar {
+  id          Int              @id @default(autoincrement())
+  code        String           @unique
+  name        String
+  description String?
+  isActive    Boolean          @default(true) @map("is_active")
+  placeholder Boolean          @default(false)
+  orderIndex  Int              @default(0) @map("order_index")
+  programmes  Programme[]
+  tocs        TheoryOfChange[]
+
+  @@map("pillars")
+}
+
+model Programme {
+  id            Int              @id @default(autoincrement())
+  code          String           @unique
+  name          String
+  description   String?
+  pillarId      Int              @map("pillar_id")
+  pillar        Pillar           @relation(fields: [pillarId], references: [id])
+  orderIndex    Int              @default(0) @map("order_index")
+  subprogrammes Subprogramme[]
+  tocs          TheoryOfChange[]
+
+  @@map("programmes")
+}
+
+model Subprogramme {
+  id          Int        @id @default(autoincrement())
+  code        String     @unique
+  name        String
+  description String?
+  programmeId Int        @map("programme_id")
+  programme   Programme  @relation(fields: [programmeId], references: [id])
+  orderIndex  Int        @default(0) @map("order_index")
+  activities  Activity[]
+
+  @@map("subprogrammes")
+}
+
+model Activity {
+  id              Int               @id @default(autoincrement())
+  code            String            @unique
+  name            String
+  description     String?
+  subprogrammeId  Int               @map("subprogramme_id")
+  subprogramme    Subprogramme      @relation(fields: [subprogrammeId], references: [id])
+  beneficiaryKind BeneficiaryKind   @map("beneficiary_kind")
+  sectorScope     SectorScope       @map("sector_scope")
+  startYear       Int?              @map("start_year")
+  endYear         Int?              @map("end_year")
+  isActive        Boolean           @default(true) @map("is_active")
+  orderIndex      Int               @default(0) @map("order_index")
+  variants        ActivityVariant[]
+  groups          Group[]
+  enrollments     Enrollment[]
+  formSchemas     FormSchema[]
+
+  @@map("activities")
+}
+
+model ActivityVariant {
+  id         Int      @id @default(autoincrement())
+  code       String
+  label      String
+  note       String?
+  activityId Int      @map("activity_id")
+  activity   Activity @relation(fields: [activityId], references: [id])
+  orderIndex Int      @default(0) @map("order_index")
+
+  @@unique([activityId, code])
+  @@map("activity_variants")
+}
+
+// ─── Beneficiary spine ───────────────────────────────────────────────
+
+model Person {
+  id                    Int                  @id @default(autoincrement())
+  fullName              String               @map("full_name")
+  sex                   String? // 'female' | 'male' | 'other'
+  dob                   DateTime?            @db.Date
+  age                   Int?
+  phone                 String?
+  nationalId            String?              @map("national_id")
+  schoolClass           String?              @map("school_class")
+  operationalLocationId Int?                 @map("operational_location_id")
+  operationalLocation   OperationalLocation? @relation(fields: [operationalLocationId], references: [id])
+  /// SHA-256 hash of (fullName + dob + guardianPhone) — soft dedup key
+  dedupHash             String               @unique @map("dedup_hash")
+  demographicsJson      Json?                @map("demographics_json")
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+
+  enrollments      Enrollment[]
+  groupMemberships GroupMembership[]
+  formSubmissions  FormSubmission[]
+  studentAccount   StudentAccount?
+
+  @@index([fullName])
+  @@map("persons")
+}
+
+model School {
+  id                    Int                 @id @default(autoincrement())
+  name                  String
+  operationalLocationId Int                 @map("operational_location_id")
+  operationalLocation   OperationalLocation @relation(fields: [operationalLocationId], references: [id])
+  level                 String? // 'primary' | 'secondary' | 'mixed'
+  headTeacher           String?             @map("head_teacher")
+  contactPhone          String?             @map("contact_phone")
+  createdAt             DateTime            @default(now()) @map("created_at")
+
+  enrollments Enrollment[]
+
+  @@map("schools")
+}
+
+enum GroupStatus {
+  active
+  struggling
+  dormant
+  closed
+}
+
+model Group {
+  id                    Int                  @id @default(autoincrement())
+  activityId            Int                  @map("activity_id")
+  activity              Activity             @relation(fields: [activityId], references: [id])
+  name                  String
+  operationalLocationId Int?                 @map("operational_location_id")
+  operationalLocation   OperationalLocation? @relation(fields: [operationalLocationId], references: [id])
+  formedAt              DateTime?            @map("formed_at") @db.Date
+  status                GroupStatus          @default(active)
+  sector                String?
+  leaderPersonId        Int?                 @map("leader_person_id")
+  notes                 String?
+  createdAt             DateTime             @default(now()) @map("created_at")
+  updatedAt             DateTime             @updatedAt @map("updated_at")
+
+  memberships  GroupMembership[]
+  transactions GroupTransaction[]
+  enrollments  Enrollment[]
+
+  @@index([activityId])
+  @@index([status])
+  @@map("groups")
+}
+
+model GroupMembership {
+  id        Int       @id @default(autoincrement())
+  groupId   Int       @map("group_id")
+  group     Group     @relation(fields: [groupId], references: [id])
+  personId  Int       @map("person_id")
+  person    Person    @relation(fields: [personId], references: [id])
+  joinedAt  DateTime  @map("joined_at") @db.Date
+  leftAt    DateTime? @map("left_at") @db.Date
+  role      String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([groupId])
+  @@index([personId])
+  @@map("group_memberships")
+}
+
+enum EnrollmentStatus {
+  enrolled
+  active
+  graduated
+  dropped_out
+  transferred
+  withdrawn
+}
+
+model Enrollment {
+  id                 Int              @id @default(autoincrement())
+  activityId         Int              @map("activity_id")
+  activity           Activity         @relation(fields: [activityId], references: [id])
+  cohortYear         Int              @map("cohort_year")
+  personId           Int?             @map("person_id")
+  person             Person?          @relation(fields: [personId], references: [id])
+  groupId            Int?             @map("group_id")
+  group              Group?           @relation(fields: [groupId], references: [id])
+  schoolId           Int?             @map("school_id")
+  school             School?          @relation(fields: [schoolId], references: [id])
+  status             EnrollmentStatus @default(enrolled)
+  startedAt          DateTime         @default(now()) @map("started_at") @db.Date
+  endedAt            DateTime?        @map("ended_at") @db.Date
+  exitReason         String?          @map("exit_reason")
+  exitReasonCategory String?          @map("exit_reason_category")
+  metaJson           Json?            @map("meta_json")
+  syncedFromFormId   Int?             @map("synced_from_form_id")
+  syncedFromForm     FormSubmission?  @relation(fields: [syncedFromFormId], references: [id])
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  seedlingDistributions SeedlingDistribution[]
+  cropCycles            CropCycle[]
+  agroforestryPlots     AgroforestryPlot[]
+  fieldVisits           FieldVisit[]
+
+  @@unique([activityId, cohortYear, personId, groupId, schoolId])
+  @@index([activityId, cohortYear])
+  @@index([status, cohortYear])
+  @@map("enrollments")
+}
+
+enum TransactionKind {
+  capital
+  revenue
+  expense
+  distribution
+}
+
+model GroupTransaction {
+  id              Int             @id @default(autoincrement())
+  groupId         Int             @map("group_id")
+  group           Group           @relation(fields: [groupId], references: [id])
+  periodYearMonth String          @map("period_year_month") // 'YYYY-MM'
+  kind            TransactionKind
+  amountTSh       Decimal         @map("amount_tsh") @db.Decimal(14, 2)
+  category        String?
+  narrative       String?
+  recordedById    Int?            @map("recorded_by_id")
+  recordedBy      User?           @relation(fields: [recordedById], references: [id])
+  recordedAt      DateTime        @default(now()) @map("recorded_at")
+
+  @@index([groupId, periodYearMonth])
+  @@index([periodYearMonth])
+  @@map("group_transactions")
+}
+
+// ─── Forms (Kobo mirror) ─────────────────────────────────────────────
+
+model FormSchema {
+  id          Int       @id @default(autoincrement())
+  activityId  Int?      @map("activity_id")
+  activity    Activity? @relation(fields: [activityId], references: [id])
+  koboFormUid String?   @map("kobo_form_uid")
+  version     String
+  title       String
+  schemaJson  Json      @map("schema_json")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  submissions FormSubmission[]
+
+  @@unique([activityId, version])
+  @@index([koboFormUid])
+  @@map("form_schemas")
+}
+
+model FormSubmission {
+  id                    Int                                    @id @default(autoincrement())
+  formSchemaId          Int                                    @map("form_schema_id")
+  formSchema            FormSchema                             @relation(fields: [formSchemaId], references: [id])
+  personId              Int?                                   @map("person_id")
+  person                Person?                                @relation(fields: [personId], references: [id])
+  operationalLocationId Int?                                   @map("operational_location_id")
+  operationalLocation   OperationalLocation?                   @relation(fields: [operationalLocationId], references: [id])
+  payloadJson           Json                                   @map("payload_json")
+  gpsLat                Float?                                 @map("gps_lat")
+  gpsLng                Float?                                 @map("gps_lng")
+  geom                  Unsupported("geography(Point, 4326)")?
+  submittedById         Int?                                   @map("submitted_by_id")
+  submittedBy           User?                                  @relation(fields: [submittedById], references: [id])
+  submittedAt           DateTime                               @default(now()) @map("submitted_at")
+  syncedAt              DateTime?                              @map("synced_at")
+  /// Idempotency key — set by the client offline queue
+  idempotencyKey        String?                                @unique @map("idempotency_key")
+
+  enrollments Enrollment[]
+
+  @@index([formSchemaId])
+  @@index([submittedAt])
+  @@map("form_submissions")
+}
+
+// ─── Theory of Change ────────────────────────────────────────────────
+
+enum TocScope {
+  pillar
+  programme
+}
+
+enum TocLevel {
+  input
+  activity
+  output
+  outcome
+  impact
+}
+
+model TheoryOfChange {
+  id          Int        @id @default(autoincrement())
+  scope       TocScope
+  pillarId    Int?       @map("pillar_id")
+  pillar      Pillar?    @relation(fields: [pillarId], references: [id])
+  programmeId Int?       @map("programme_id")
+  programme   Programme? @relation(fields: [programmeId], references: [id])
+  version     String
+  title       String
+  narrative   String?
+  publishedAt DateTime?  @map("published_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  nodes TocNode[]
+
+  @@unique([scope, pillarId, programmeId, version])
+  @@map("theories_of_change")
+}
+
+model TocNode {
+  id         Int            @id @default(autoincrement())
+  tocId      Int            @map("toc_id")
+  toc        TheoryOfChange @relation(fields: [tocId], references: [id])
+  code       String
+  level      TocLevel
+  statement  String
+  note       String?
+  parentId   Int?           @map("parent_id")
+  parent     TocNode?       @relation("TocNodeParent", fields: [parentId], references: [id])
+  children   TocNode[]      @relation("TocNodeParent")
+  orderIndex Int            @default(0) @map("order_index")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  @@unique([tocId, code])
+  @@index([level])
+  @@map("toc_nodes")
+}
+
+// ─── Student portal (Phase 3) ────────────────────────────────────────
+
+enum StudentAccountStatus {
+  pending
+  approved
+  suspended
+}
+
+model StudentAccount {
+  id           Int                  @id @default(autoincrement())
+  personId     Int                  @unique @map("person_id")
+  person       Person               @relation(fields: [personId], references: [id])
+  email        String               @unique
+  passwordHash String               @map("password_hash")
+  status       StudentAccountStatus @default(pending)
+  approvedById Int?                 @map("approved_by_id")
+  approvedBy   User?                @relation("StudentAccountApprovedBy", fields: [approvedById], references: [id])
+  approvedAt   DateTime?            @map("approved_at")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  lastLoginAt  DateTime?            @map("last_login_at")
+
+  @@index([status])
+  @@map("student_accounts")
+}
+
+// ─── Users & Auth (officer auth) ─────────────────────────────────────
 
 model User {
-  id                    Int                    @id @default(autoincrement())
-  name                  String
-  email                 String                 @unique
-  phone                 String?
-  role                  String                 // 'admin' | 'manager' | 'field_officer' | 'donor_viewer'
-  createdAt             DateTime               @default(now()) @map("created_at")
-  registeredFarmers     Farmer[]
-  distributions         SeedlingDistribution[]
-  survivalChecks        SurvivalCheck[]
-  fieldVisits           FieldVisit[]
+  id                           Int                    @id @default(autoincrement())
+  name                         String
+  email                        String                 @unique
+  phone                        String?
+  role                         String // 'admin' | 'manager' | 'field_officer' | 'donor_viewer'
+  createdAt                    DateTime               @default(now()) @map("created_at")
+  registeredFarmers            Farmer[]
+  distributions                SeedlingDistribution[]
+  survivalChecks               SurvivalCheck[]
+  fieldVisits                  FieldVisit[]
+  groupTransactions            GroupTransaction[]
+  formSubmissions              FormSubmission[]
+  operationalLocationsCreated  OperationalLocation[]  @relation("OperationalLocationCreatedBy")
+  operationalLocationsReviewed OperationalLocation[]  @relation("OperationalLocationReviewedBy")
+  approvedStudentAccounts      StudentAccount[]       @relation("StudentAccountApprovedBy")
 
   @@map("users")
 }
@@ -99,20 +549,22 @@ model Farmer {
 }
 
 model SeedlingDistribution {
-  id               Int             @id @default(autoincrement())
-  farmerId         Int             @map("farmer_id")
-  farmer           Farmer          @relation(fields: [farmerId], references: [id])
-  species          String
-  quantity         Int
-  distributionDate DateTime        @map("distribution_date") @db.Date
-  nurseryId        Int?            @map("nursery_id")
-  nursery          Nursery?        @relation(fields: [nurseryId], references: [id])
-  distributedBy    Int             @map("distributed_by")
-  distributedByUser User           @relation(fields: [distributedBy], references: [id])
-  locationLat      Float?          @map("location_lat")
-  locationLng      Float?          @map("location_lng")
-  notes            String?
-  survivalChecks   SurvivalCheck[]
+  id                Int             @id @default(autoincrement())
+  farmerId          Int             @map("farmer_id")
+  farmer            Farmer          @relation(fields: [farmerId], references: [id])
+  species           String
+  quantity          Int
+  distributionDate  DateTime        @map("distribution_date") @db.Date
+  nurseryId         Int?            @map("nursery_id")
+  nursery           Nursery?        @relation(fields: [nurseryId], references: [id])
+  distributedBy     Int             @map("distributed_by")
+  distributedByUser User            @relation(fields: [distributedBy], references: [id])
+  locationLat       Float?          @map("location_lat")
+  locationLng       Float?          @map("location_lng")
+  notes             String?
+  enrollmentId      Int?            @map("enrollment_id")
+  enrollment        Enrollment?     @relation(fields: [enrollmentId], references: [id])
+  survivalChecks    SurvivalCheck[]
 
   @@map("seedling_distributions")
 }
@@ -132,26 +584,30 @@ model SurvivalCheck {
 }
 
 model CropCycle {
-  id                  Int       @id @default(autoincrement())
-  farmerId            Int       @map("farmer_id")
-  farmer              Farmer    @relation(fields: [farmerId], references: [id])
-  cropType            String    @map("crop_type")
-  plantingDate        DateTime  @map("planting_date") @db.Date
-  expectedHarvestDate DateTime? @map("expected_harvest_date") @db.Date
-  actualHarvestDate   DateTime? @map("actual_harvest_date") @db.Date
-  areaHectares        Float?    @map("area_hectares")
-  yieldKg             Float?    @map("yield_kg")
+  id                  Int         @id @default(autoincrement())
+  farmerId            Int         @map("farmer_id")
+  farmer              Farmer      @relation(fields: [farmerId], references: [id])
+  cropType            String      @map("crop_type")
+  plantingDate        DateTime    @map("planting_date") @db.Date
+  expectedHarvestDate DateTime?   @map("expected_harvest_date") @db.Date
+  actualHarvestDate   DateTime?   @map("actual_harvest_date") @db.Date
+  areaHectares        Float?      @map("area_hectares")
+  yieldKg             Float?      @map("yield_kg")
+  enrollmentId        Int?        @map("enrollment_id")
+  enrollment          Enrollment? @relation(fields: [enrollmentId], references: [id])
 
   @@map("crop_cycles")
 }
 
 model AgroforestryPlot {
-  id             Int      @id @default(autoincrement())
-  farmerId       Int      @map("farmer_id")
-  farmer         Farmer   @relation(fields: [farmerId], references: [id])
-  areaHectares   Float?   @map("area_hectares")
-  speciesPlanted String[] @map("species_planted")
-  plantingDate   DateTime @map("planting_date") @db.Date
+  id             Int         @id @default(autoincrement())
+  farmerId       Int         @map("farmer_id")
+  farmer         Farmer      @relation(fields: [farmerId], references: [id])
+  areaHectares   Float?      @map("area_hectares")
+  speciesPlanted String[]    @map("species_planted")
+  plantingDate   DateTime    @map("planting_date") @db.Date
+  enrollmentId   Int?        @map("enrollment_id")
+  enrollment     Enrollment? @relation(fields: [enrollmentId], references: [id])
 
   @@map("agroforestry_plots")
 }
@@ -182,7 +638,7 @@ model NurseryBatch {
   plantingDate     DateTime  @map("planting_date") @db.Date
   germinationCount Int?      @map("germination_count")
   readyDate        DateTime? @map("ready_date") @db.Date
-  status           String    // 'germinating' | 'growing' | 'ready' | 'distributed' | 'failed'
+  status           String // 'germinating' | 'growing' | 'ready' | 'distributed' | 'failed'
 
   @@map("nursery_batches")
 }
@@ -190,17 +646,18 @@ model NurseryBatch {
 // ─── Cattle ──────────────────────────────────────────────────────────
 
 model CattleIncident {
-  id                Int      @id @default(autoincrement())
-  locationLat       Float    @map("location_lat")
-  locationLng       Float    @map("location_lng")
-  villageId         Int?     @map("village_id")
-  village           Village? @relation(fields: [villageId], references: [id])
-  incidentType      String   @map("incident_type")
+  id                Int                                    @id @default(autoincrement())
+  locationLat       Float                                  @map("location_lat")
+  locationLng       Float                                  @map("location_lng")
+  geom              Unsupported("geography(Point, 4326)")?
+  villageId         Int?                                   @map("village_id")
+  village           Village?                               @relation(fields: [villageId], references: [id])
+  incidentType      String                                 @map("incident_type")
   severity          String
-  date              DateTime @db.Date
-  estimatedHerdSize Int?     @map("estimated_herd_size")
+  date              DateTime                               @db.Date
+  estimatedHerdSize Int?                                   @map("estimated_herd_size")
   description       String?
-  photoUrl          String?  @map("photo_url")
+  photoUrl          String?                                @map("photo_url")
 
   @@map("cattle_incidents")
 }
@@ -208,18 +665,21 @@ model CattleIncident {
 // ─── Field Visits ────────────────────────────────────────────────────
 
 model FieldVisit {
-  id          Int       @id @default(autoincrement())
-  userId      Int       @map("user_id")
-  user        User      @relation(fields: [userId], references: [id])
-  villageId   Int       @map("village_id")
-  village     Village   @relation(fields: [villageId], references: [id])
-  visitDate   DateTime  @map("visit_date") @db.Date
-  visitType   String    @map("visit_type")
-  locationLat Float?    @map("location_lat")
-  locationLng Float?    @map("location_lng")
-  notes       String?
-  photos      String[]
-  syncedAt    DateTime? @map("synced_at")
+  id           Int                                    @id @default(autoincrement())
+  userId       Int                                    @map("user_id")
+  user         User                                   @relation(fields: [userId], references: [id])
+  villageId    Int                                    @map("village_id")
+  village      Village                                @relation(fields: [villageId], references: [id])
+  visitDate    DateTime                               @map("visit_date") @db.Date
+  visitType    String                                 @map("visit_type")
+  locationLat  Float?                                 @map("location_lat")
+  locationLng  Float?                                 @map("location_lng")
+  geom         Unsupported("geography(Point, 4326)")?
+  notes        String?
+  photos       String[]
+  syncedAt     DateTime?                              @map("synced_at")
+  enrollmentId Int?                                   @map("enrollment_id")
+  enrollment   Enrollment?                            @relation(fields: [enrollmentId], references: [id])
 
   @@map("field_visits")
 }
@@ -227,9 +687,9 @@ model FieldVisit {
 // ─── Weather ─────────────────────────────────────────────────────────
 
 model WeatherData {
-  id           Int    @id @default(autoincrement())
-  wardId       Int    @map("ward_id")
-  ward         Ward   @relation(fields: [wardId], references: [id])
+  id           Int      @id @default(autoincrement())
+  wardId       Int      @map("ward_id")
+  ward         Ward     @relation(fields: [wardId], references: [id])
   date         DateTime @db.Date
   rainfallMm   Float?   @map("rainfall_mm")
   tempMaxC     Float?   @map("temp_max_c")
