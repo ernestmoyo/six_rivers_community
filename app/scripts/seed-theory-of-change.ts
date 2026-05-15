@@ -7,10 +7,10 @@
  *
  * Usage:  npm run seed:toc
  */
-import { PrismaClient } from "../src/generated/prisma/client";
 import { ALL_TOCS, type TheoryOfChange } from "../src/lib/theory-of-change";
+import { createSeedClient } from "./_prisma";
 
-const prisma = new PrismaClient();
+const prisma = createSeedClient();
 
 async function seedToc(toc: TheoryOfChange): Promise<{ tocId: number; nodes: number }> {
   const pillar = toc.pillarCode
@@ -31,29 +31,38 @@ async function seedToc(toc: TheoryOfChange): Promise<{ tocId: number; nodes: num
     );
   }
 
-  const row = await prisma.theoryOfChange.upsert({
+  // Prisma's compound-unique input rejects null components, so we do a
+  // find-first followed by either update or create. This is equivalent to
+  // an upsert and is the canonical pattern for unique constraints that
+  // include nullable FKs.
+  const existing = await prisma.theoryOfChange.findFirst({
     where: {
-      scope_pillarId_programmeId_version: {
-        scope: toc.scope,
-        pillarId: pillar?.id ?? null,
-        programmeId: programme?.id ?? null,
-        version: toc.version,
-      },
-    },
-    create: {
       scope: toc.scope,
       pillarId: pillar?.id ?? null,
       programmeId: programme?.id ?? null,
       version: toc.version,
-      title: toc.title,
-      narrative: toc.narrative,
-      publishedAt: new Date(),
-    },
-    update: {
-      title: toc.title,
-      narrative: toc.narrative,
     },
   });
+
+  const row = existing
+    ? await prisma.theoryOfChange.update({
+        where: { id: existing.id },
+        data: {
+          title: toc.title,
+          narrative: toc.narrative,
+        },
+      })
+    : await prisma.theoryOfChange.create({
+        data: {
+          scope: toc.scope,
+          pillarId: pillar?.id ?? null,
+          programmeId: programme?.id ?? null,
+          version: toc.version,
+          title: toc.title,
+          narrative: toc.narrative,
+          publishedAt: new Date(),
+        },
+      });
 
   // Wipe + reinsert nodes for this version. Nodes are write-once per version;
   // editing within a version means re-running this seed, which is fine since

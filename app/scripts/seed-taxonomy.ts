@@ -9,7 +9,6 @@
  *
  * Usage:  npm run seed:taxonomy
  */
-import { PrismaClient } from "../src/generated/prisma/client";
 import {
   TAXONOMY,
   type Activity,
@@ -17,8 +16,9 @@ import {
   type Programme,
   type Subprogramme,
 } from "../src/lib/taxonomy";
+import { createSeedClient } from "./_prisma";
 
-const prisma = new PrismaClient();
+const prisma = createSeedClient();
 
 interface SeedStats {
   pillars: number;

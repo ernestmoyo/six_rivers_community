@@ -7,12 +7,12 @@
  *
  * Usage:  npm run seed
  */
-import { PrismaClient } from "../src/generated/prisma/client";
 import { seedTaxonomy } from "./seed-taxonomy";
 import { seedOperationalLocations } from "./seed-operational-locations";
 import { seedTheoryOfChange } from "./seed-theory-of-change";
+import { createSeedClient } from "./_prisma";
 
-const prisma = new PrismaClient();
+const prisma = createSeedClient();
 
 async function main(): Promise<void> {
   /* eslint-disable no-console */

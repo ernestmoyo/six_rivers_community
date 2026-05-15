@@ -12,9 +12,10 @@
  *
  * Usage:  npm run seed:locations
  */
-import { PrismaClient, ReconciliationStatus, OperationalLocationKind } from "../src/generated/prisma/client";
+import { ReconciliationStatus, OperationalLocationKind } from "../src/generated/prisma/enums";
+import { createSeedClient } from "./_prisma";
 
-const prisma = new PrismaClient();
+const prisma = createSeedClient();
 
 interface OperationalLocationSeed {
   kind: OperationalLocationKind;

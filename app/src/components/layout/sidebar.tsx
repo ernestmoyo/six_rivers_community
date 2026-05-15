@@ -32,7 +32,15 @@ const navigation = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Programmes", href: "/programmes", icon: Layers },
   { title: "Map", href: "/map", icon: Map },
-  { title: "Villages", href: "/villages", icon: Building2 },
+  {
+    title: "Villages",
+    href: "/villages",
+    icon: Building2,
+    children: [
+      { title: "Overview", href: "/villages" },
+      { title: "Reconcile (admin)", href: "/villages/reconcile" },
+    ],
+  },
   {
     title: "Farming",
     href: "/farming",
