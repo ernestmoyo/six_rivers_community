@@ -25,6 +25,7 @@ import {
   FileText,
   Layers,
   Target,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -63,6 +64,7 @@ const navigation = [
       { title: "Pressure Map", href: "/cattle/map" },
     ],
   },
+  { title: "Cohorts", href: "/cohorts", icon: Users },
   { title: "IGA Groups", href: "/iga", icon: Briefcase },
   { title: "Eco Clubs", href: "/eco-clubs", icon: GraduationCap },
   { title: "Radio Programme", href: "/radio", icon: Radio },
