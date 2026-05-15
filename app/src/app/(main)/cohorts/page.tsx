@@ -139,6 +139,11 @@ export default function CohortsPage() {
   }, [activityCode, year, statusFilter]);
 
   useEffect(() => {
+    // The set-state-in-effect rule is fired because fetchRows updates state
+    // when it resolves. This is the standard fetch-in-effect pattern; the
+    // setState calls happen *after* the await, not synchronously in the
+    // effect body. Suppress the false positive.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchRows();
   }, [fetchRows]);
 

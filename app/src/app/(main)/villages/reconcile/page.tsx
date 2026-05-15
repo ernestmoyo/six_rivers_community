@@ -156,6 +156,9 @@ export default function ReconcilePage() {
   }, []);
 
   useEffect(() => {
+    // Standard fetch-in-effect — setState fires after the await, not in the
+    // synchronous body. Suppress the rule's false positive.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchRows();
   }, [fetchRows]);
 
