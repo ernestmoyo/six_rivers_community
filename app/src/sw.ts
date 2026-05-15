@@ -4,6 +4,7 @@
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
+  BackgroundSyncPlugin,
   CacheFirst,
   ExpirationPlugin,
   NetworkFirst,
@@ -26,9 +27,25 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
-    // 1. API mutations — never cache.
+    // 1a. POST/PATCH/PUT/DELETE on /api/* — never cache, but background-sync
+    //     replay them when the device next has connectivity. This lets the
+    //     PWA queue submissions even when the tab is closed.
     {
-      matcher: ({ url }) => url.pathname.startsWith("/api/"),
+      matcher: ({ url, request }) =>
+        url.pathname.startsWith("/api/") && request.method !== "GET",
+      handler: new NetworkOnly({
+        plugins: [
+          new BackgroundSyncPlugin("sr-form-sync", {
+            maxRetentionTime: 60 * 24 * 7, // 7 days of retry attempts
+          }),
+        ],
+      }),
+    },
+    // 1b. GET on /api/* — also never cache (we want live indicator + cohort
+    //     reads), but no background sync needed for reads.
+    {
+      matcher: ({ url, request }) =>
+        url.pathname.startsWith("/api/") && request.method === "GET",
       handler: new NetworkOnly(),
     },
     // 2. Static Next build assets.

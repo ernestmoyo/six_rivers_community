@@ -15,7 +15,8 @@
     "seed": "tsx scripts/seed.ts",
     "seed:taxonomy": "tsx scripts/seed-taxonomy.ts",
     "seed:locations": "tsx scripts/seed-operational-locations.ts",
-    "seed:toc": "tsx scripts/seed-theory-of-change.ts"
+    "seed:toc": "tsx scripts/seed-theory-of-change.ts",
+    "seed:indicators": "tsx scripts/seed-indicators.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

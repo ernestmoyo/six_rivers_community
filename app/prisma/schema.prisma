@@ -171,6 +171,7 @@ model Programme {
   orderIndex    Int              @default(0) @map("order_index")
   subprogrammes Subprogramme[]
   tocs          TheoryOfChange[]
+  indicators    Indicator[]
 
   @@map("programmes")
 }
@@ -205,6 +206,7 @@ model Activity {
   groups          Group[]
   enrollments     Enrollment[]
   formSchemas     FormSchema[]
+  indicators      Indicator[]
 
   @@map("activities")
 }
@@ -475,9 +477,82 @@ model TocNode {
   orderIndex Int            @default(0) @map("order_index")
   createdAt  DateTime       @default(now()) @map("created_at")
 
+  indicators Indicator[]
+
   @@unique([tocId, code])
   @@index([level])
   @@map("toc_nodes")
+}
+
+// ─── Indicators ──────────────────────────────────────────────────────
+
+enum IndicatorComputation {
+  manual
+  derived
+}
+
+enum IndicatorPeriodKind {
+  year
+  quarter
+  month
+}
+
+enum IndicatorSource {
+  auto
+  manual
+}
+
+model Indicator {
+  id             Int                  @id @default(autoincrement())
+  code           String               @unique
+  name           String
+  description    String?
+  level          TocLevel
+  unit           String // 'count' | 'percent' | 'ha' | 'TSh' | 'kg' | 'km' | ...
+  disaggregateBy String[]             @default([]) @map("disaggregate_by")
+  computation    IndicatorComputation @default(manual)
+  derivedQuery   String?              @map("derived_query")
+  tocNodeId      Int?                 @map("toc_node_id")
+  tocNode        TocNode?             @relation(fields: [tocNodeId], references: [id])
+  /// String code of the TocNode this indicator targets (resolved to tocNodeId
+  /// during seeding). Kept here for traceability so a future seed re-link is
+  /// easy even if TocNode ids change.
+  tocNodeCode    String?              @map("toc_node_code")
+  programmeId    Int?                 @map("programme_id")
+  programme      Programme?           @relation(fields: [programmeId], references: [id])
+  activityId     Int?                 @map("activity_id")
+  activity       Activity?            @relation(fields: [activityId], references: [id])
+  isActive       Boolean              @default(true) @map("is_active")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  periods IndicatorPeriod[]
+
+  @@index([level])
+  @@index([programmeId])
+  @@index([activityId])
+  @@map("indicators")
+}
+
+model IndicatorPeriod {
+  id                 Int                 @id @default(autoincrement())
+  indicatorId        Int                 @map("indicator_id")
+  indicator          Indicator           @relation(fields: [indicatorId], references: [id])
+  periodKind         IndicatorPeriodKind @map("period_kind")
+  periodKey          String              @map("period_key") // 'YYYY' | 'YYYY-Qn' | 'YYYY-MM'
+  target             Decimal?            @db.Decimal(18, 4)
+  actual             Decimal?            @db.Decimal(18, 4)
+  source             IndicatorSource     @default(auto)
+  disaggregationJson Json?               @map("disaggregation_json")
+  updatedById        Int?                @map("updated_by_id")
+  updatedBy          User?               @relation(fields: [updatedById], references: [id])
+  computedAt         DateTime?           @map("computed_at")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  @@unique([indicatorId, periodKind, periodKey])
+  @@index([periodKey])
+  @@map("indicator_periods")
 }
 
 // ─── Student portal (Phase 3) ────────────────────────────────────────
@@ -523,6 +598,7 @@ model User {
   operationalLocationsCreated  OperationalLocation[]  @relation("OperationalLocationCreatedBy")
   operationalLocationsReviewed OperationalLocation[]  @relation("OperationalLocationReviewedBy")
   approvedStudentAccounts      StudentAccount[]       @relation("StudentAccountApprovedBy")
+  indicatorPeriods             IndicatorPeriod[]
 
   @@map("users")
 }

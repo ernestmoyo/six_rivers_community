@@ -91,6 +91,7 @@ const navigation = [
     children: [
       { title: "Overview", href: "/impact" },
       { title: "Theory of Change", href: "/impact/theory-of-change" },
+      { title: "Indicators", href: "/impact/indicators" },
       { title: "Quarterly Report", href: "/impact/quarterly" },
       { title: "Export", href: "/impact/export" },
     ],
