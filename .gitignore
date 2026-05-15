@@ -38,6 +38,21 @@ six rivers.txt
 docs/correspondence/
 docs/meeting-notes/
 docs/presentations/
+# Edna Sonda delivery (May 2026) — beneficiary names, SRATA students,
+# transcripts and supervisor messages. Lives on local disk for reference
+# only; must never be pushed to GitHub.
+docs/7 square- Ernest/
+docs/7 square- Ernest.zip
+data/7 square- Ernest.zip
+"Six Rivers.zip"
+Six Rivers.zip
+
+# APK build artifacts (PWABuilder extraction)
+_apk_unzipped/
+*.apk
+
+# Local backup/revert snapshots — see REVERT.md
+backups/
 
 # Raw downloaded repos (duplicated in data/)
 Tanzania_Admin_Shapefiles-main/
