@@ -89,7 +89,7 @@ function OnboardInner() {
               <Input
                 id="name"
                 required
-                placeholder="e.g. Lilian Mihambo"
+                placeholder="Your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />

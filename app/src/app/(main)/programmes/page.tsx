@@ -298,7 +298,7 @@ export default function ProgrammesPage() {
     <div className="flex flex-col">
       <Header
         title="Programmes"
-        subtitle="Pillar → Programme → Subprogramme → Activity — Edna's tree as data"
+        subtitle="Pillar → Programme → Subprogramme → Activity (in line with the data tree)"
       />
 
       <div className="space-y-6 p-4 sm:p-6">
@@ -337,7 +337,7 @@ export default function ProgrammesPage() {
             Source of truth
           </p>
           <p className="leading-relaxed">
-            This tree is authored in <span className="font-mono">src/lib/taxonomy.ts</span>. When Edna asks for a change, edit that file and re-run the seed script — the UI and the database update together. Codes in <span className="font-mono">monospace</span> are stable identifiers used by future <code>Indicator</code> rows in Phase 2.
+            This tree is authored in <span className="font-mono">src/lib/taxonomy.ts</span>. When the taxonomy needs to change (M&amp;E to request), edit that file and re-run the seed script — the UI and the database update together. Codes in <span className="font-mono">monospace</span> are stable identifiers used by future <code>Indicator</code> rows.
           </p>
         </div>
       </div>

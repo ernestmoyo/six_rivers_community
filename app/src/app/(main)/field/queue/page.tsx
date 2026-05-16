@@ -45,7 +45,7 @@ const pendingVisits: FieldVisit[] = [
   {
     id: 100,
     userId: 1,
-    userName: "Justina Kizanye",
+    userName: "Field Officer (Ifakara)",
     villageId: 7,
     villageName: "Mahango",
     visitDate: "2026-03-11",
@@ -59,7 +59,7 @@ const pendingVisits: FieldVisit[] = [
   {
     id: 101,
     userId: 3,
-    userName: "Lilian Mihambo",
+    userName: "Field Officer (Usangu)",
     villageId: 6,
     villageName: "Igomelo",
     visitDate: "2026-03-12",

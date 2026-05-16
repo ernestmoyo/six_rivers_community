@@ -577,13 +577,13 @@ export default function ImpactPage() {
     setSending(recipient);
     const loadingId = toast.loading(
       recipient === "edna"
-        ? "Sending M&E report to Edna..."
-        : "Sending report to management team..."
+        ? "Sending report to M&E…"
+        : "Sending report to management team…"
     );
     try {
       const summary =
         recipient === "edna"
-          ? "Hi Edna, here is the latest M&E snapshot for the Six Rivers community programme. All KPIs are computed from live data. Full PDF to follow in a later cycle."
+          ? "Hi team, here is the latest M&E snapshot for the Six Rivers community programme. All KPIs are computed from live data. Full PDF to follow in a later cycle."
           : "Hi team, sharing this quarter's impact snapshot for your review. KPIs are live-computed from the dashboard.";
       const res = await fetch("/api/send-report", {
         method: "POST",
@@ -620,7 +620,7 @@ export default function ImpactPage() {
       toast.dismiss(loadingId);
       if (res.ok) {
         toast.success(
-          recipient === "edna" ? "Report sent to Edna" : "Report sent to the team",
+          recipient === "edna" ? "Report sent to M&E" : "Report sent to the team",
           {
             description: `Delivered to ${(data.recipients ?? []).join(", ")}`,
           }
@@ -690,7 +690,7 @@ export default function ImpactPage() {
               disabled={sending !== null}
             >
               {sending === "edna" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-              Send to Edna (M&E)
+              Send to M&E
             </Button>
             <Button
               variant="outline"

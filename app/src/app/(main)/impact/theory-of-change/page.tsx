@@ -353,8 +353,9 @@ export default function TheoryOfChangePage() {
               <CardContent className="p-6 text-sm text-muted-foreground">
                 The Protection pillar is intentionally a placeholder. Real
                 inputs, activities, and outcomes will populate after a working
-                session with Thomas Barnes covering cattle pressure on the
-                Ihefu wetland and the law-enforcement workflow.
+                session with the Protection lead covering cattle pressure on
+                the Ihefu wetland and the law-enforcement workflow
+                (Protection team to define).
               </CardContent>
             </Card>
           </TabsContent>
@@ -367,7 +368,7 @@ export default function TheoryOfChangePage() {
             Phase 2 — Indicator engine
           </p>
           <p className="leading-relaxed">
-            Each ToC node above gets a unique code (e.g. <span className="font-mono">hwce.output.students_enrolled</span>). In Phase 2 we attach <code>Indicator</code> rows to these codes and compute <code>IndicatorPeriod</code> actuals nightly from the enrollment, ledger, and field-visit tables. Mary&apos;s donor dashboard and the quarterly PDF then read from the same indicator store.
+            Each ToC node above gets a unique code (e.g. <span className="font-mono">hwce.output.students_enrolled</span>). <code>Indicator</code> rows attach to these codes and <code>IndicatorPeriod</code> actuals are computed nightly from the enrollment, ledger, and field-visit tables. The donor dashboard and the quarterly PDF then read from the same indicator store (Management to review).
           </p>
         </div>
 

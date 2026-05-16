@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const html = `
       <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        ${brandHeader(`${kindLabel} · Attention needed`, "Impact Manager alert — for Mary Marandu")}
+        ${brandHeader(`${kindLabel} · Attention needed`, "Impact Manager alert")}
         <div style="border: 1px solid #DDDDDD; border-top: none; padding: 24px;">
           <div style="display: inline-block; padding: 4px 12px; border-radius: 4px; background: ${accent}; color: white; font-weight: 600; font-size: 13px; margin-bottom: 12px;">
             ${kindLabel}

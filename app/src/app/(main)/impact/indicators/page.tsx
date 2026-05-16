@@ -199,7 +199,7 @@ export default function IndicatorsPage() {
     <div className="flex flex-col">
       <Header
         title="Indicators"
-        subtitle="The numbers Mary reports to donors. Each one points at a Theory of Change node."
+        subtitle="Reported numbers — each one points at a Theory of Change node (Management to review)"
       />
 
       <div className="space-y-6 p-4 sm:p-6">

@@ -66,8 +66,8 @@ const COMMUNITY_PILLAR_TOC: TheoryOfChange = {
       level: 'input',
       statement: 'Long-standing community relationships and trust',
       note:
-        'Built through Lilian, Justina, Irene, and the project officers — not ' +
-        'reproducible by a parachuting NGO.',
+        'Built through the field project officers over years of presence on ' +
+        'the ground — not reproducible by a parachuting NGO.',
     },
     {
       code: 'cmty.input.platform',

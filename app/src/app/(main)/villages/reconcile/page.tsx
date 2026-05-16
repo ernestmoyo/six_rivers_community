@@ -219,14 +219,14 @@ export default function ReconcilePage() {
             <div className="grid gap-3 lg:grid-cols-[2fr_3fr] lg:items-center">
               <div className="space-y-2">
                 <h2 className="text-lg font-semibold">
-                  Edna &amp; Lilian: walk every row before the Brandon meeting
+                  Reconciliation to be done
                 </h2>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Operational names from the team (e.g. <em>Iheha</em>) on the
                   left; canonical shapefile rows on the right. Flag splits,
                   decommissioned villages (old Ikoga), and missing rows
-                  (Chalizuka) so the platform can show the right names to
-                  Brandon without surprises.
+                  (Chalizuka) so the platform shows the correct names
+                  consistently (Field officers + M&amp;E to review).
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
@@ -353,7 +353,7 @@ export default function ReconcilePage() {
               <p>
                 No operational locations have been seeded yet. Run{" "}
                 <span className="font-mono">npm run seed:locations</span> to
-                load the Lilian + Edna corrections.
+                load the curated reconciliation entries.
               </p>
             </CardContent>
           </Card>
