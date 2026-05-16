@@ -17,7 +17,7 @@ them does not lose the snapshot.
 | Snapshot commit | `65d85ec` (on `main`) | Local repo + `origin` |
 | Full filesystem zip | `backups/app-pre-major-shift-2026-05-15.zip` (3.8 MB) | Local disk only — `backups/` is git-ignored |
 | Schema-only zip | `backups/app-schema-pre-major-shift-2026-05-15.zip` (129 KB) | Local disk only |
-| Database dump | `backups/db-pre-major-shift-2026-05-15.sql` (if produced — see Phase 0 §7) | Local disk only |
+| Supabase data dump (REST) | `backups/db-data-pre-major-shift-2026-05-16.json` (19 rows across 14 tables, captured 2026-05-16) | Local disk only |
 
 The zip files exclude `node_modules`, `.next`, and everything in `.gitignore` —
 they are clean, faithful snapshots of the tracked working tree at commit
@@ -114,21 +114,35 @@ psql "$DATABASE_URL" -f backups/db-pre-major-shift-2026-05-15.sql
 
 ## State of the database snapshot
 
-**Status (as of 2026-05-15):** `DATABASE_URL` in `app/.env` points at
-`localhost` (verdict: local-dev only). No remote Supabase project is wired,
-and the audit of the codebase confirmed that every API route under
-`app/src/app/api/*` accepts POSTs without persisting — all data is served
-from `src/lib/demo-data.ts`. **There is no production data to dump.**
+**Status (as of 2026-05-16):** `DATABASE_URL` in `app/.env` was switched
+to the live Supabase project (twajlgkdvunrmbbjmmqo, eu-west-1) before
+running any additive migration.
 
-Therefore `backups/db-pre-major-shift-2026-05-15.sql` was deliberately **not
-produced**. Path E option 2 (full SQL restore) is not available for this
-snapshot.
+A REST-API backup was captured at 2026-05-16 via
+`app/scripts/backup-supabase-rest.ts` and stored at
+`backups/db-data-pre-major-shift-2026-05-16.json`. It contains all rows
+from all 14 existing Supabase tables:
 
-When the major shift wires up real persistence (Phase 1 / Phase 2), every
-Prisma migration must ship with a paired `down.sql` so Path E option 1 stays
-viable. The first Phase 1 migration should also produce the first true
-production-data backup — at that point we'll add `db-pre-phase-2-<date>.sql`
-under `backups/`.
+  - field_visits           — 16 rows
+  - cattle_incidents       —  2 rows
+  - iga_financial_updates  —  1 row
+  - (11 other tables empty)
+
+To restore individual rows from the JSON dump:
+
+```bash
+node -e "
+  const j = require('./backups/db-data-pre-major-shift-2026-05-16.json');
+  const t = j.tables.find(x => x.table === 'field_visits');
+  console.log(JSON.stringify(t.rows, null, 2));
+"
+```
+
+`pg_dump` was not used (it isn't installed on the dev machine and the
+direct DB host requires IPv6, which doesn't route from this network).
+Supabase also keeps its own auto-backups (last one ~4 hours before the
+migration) accessible from the dashboard under Project Settings →
+Database → Backups.
 
 ## How to verify the snapshot is healthy right now
 

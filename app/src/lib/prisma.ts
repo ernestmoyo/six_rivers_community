@@ -19,11 +19,15 @@ declare global {
 }
 
 function createPrisma(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL;
+  // Prefer the Supabase session pooler (IPv4, port 5432, supports prepared
+  // statements). Fall back to DATABASE_URL when running against a non-Supabase
+  // database or a direct connection that does have IPv6.
+  const connectionString =
+    process.env.SESSION_POOLER_URI ?? process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error(
-      "DATABASE_URL is not configured. Set it in app/.env to point at your " +
-        "Supabase Postgres project.",
+      "Neither SESSION_POOLER_URI nor DATABASE_URL is configured. Set one in " +
+        "app/.env to point at your Supabase Postgres project.",
     );
   }
   const adapter = new PrismaPg({ connectionString });

@@ -106,66 +106,54 @@ const eco_kids_safari_count: DerivationFn = async (periodKey) => {
   return { actual: count };
 };
 
+// These three derivations read from tables that live in Supabase but are
+// NOT modelled in this Prisma schema (agroforestry_plots, crop_cycles,
+// survival_check_submissions). We hit them via $queryRaw so Prisma's
+// type-safety on our spine doesn't have to know about the legacy schema.
+
 const hectares_compatible: DerivationFn = async (periodKey) => {
   const year = parseYear(periodKey);
-  const result = await prisma.agroforestryPlot.aggregate({
-    _sum: { areaHectares: true },
-    where: {
-      plantingDate: {
-        gte: new Date(`${year}-01-01`),
-        lt: new Date(`${year + 1}-01-01`),
-      },
-    },
-  });
-  return { actual: result._sum.areaHectares ?? 0 };
+  const result = await prisma.$queryRaw<Array<{ total: number | null }>>`
+    SELECT COALESCE(SUM(area_hectares), 0)::float AS total
+    FROM agroforestry_plots
+    WHERE planting_date >= ${new Date(`${year}-01-01`)}
+      AND planting_date <  ${new Date(`${year + 1}-01-01`)}
+  `;
+  return { actual: Number(result[0]?.total ?? 0) };
 };
 
 const seedlings_distributed: DerivationFn = async (periodKey) => {
   const year = parseYear(periodKey);
-  const result = await prisma.seedlingDistribution.aggregate({
-    _sum: { quantity: true },
-    where: {
-      distributionDate: {
-        gte: new Date(`${year}-01-01`),
-        lt: new Date(`${year + 1}-01-01`),
-      },
-    },
-  });
-  return { actual: result._sum.quantity ?? 0 };
+  // No `seedling_distributions` table in this Supabase schema. The closest
+  // proxy is `agroforestry_plots.trees_planted` — trees actually put in
+  // the ground via the agroforestry programme.
+  const result = await prisma.$queryRaw<Array<{ total: number | null }>>`
+    SELECT COALESCE(SUM(trees_planted), 0)::int AS total
+    FROM agroforestry_plots
+    WHERE planting_date >= ${new Date(`${year}-01-01`)}
+      AND planting_date <  ${new Date(`${year + 1}-01-01`)}
+  `;
+  return { actual: Number(result[0]?.total ?? 0) };
 };
 
 const seedling_survival_pct: DerivationFn = async (periodKey) => {
   const year = parseYear(periodKey);
-  // Distributions in the year — count quantity.
-  const distAgg = await prisma.seedlingDistribution.aggregate({
-    _sum: { quantity: true },
-    where: {
-      distributionDate: {
-        gte: new Date(`${year}-01-01`),
-        lt: new Date(`${year + 1}-01-01`),
-      },
-    },
-  });
-  const distributed = distAgg._sum.quantity ?? 0;
-
-  if (distributed === 0) return { actual: 0 };
-
-  // Latest survival check per distribution; sum survivingCount.
-  // Cheap approximation: take the latest checkDate per distribution.
-  const latest = await prisma.$queryRaw<
-    Array<{ surviving: number }>
-  >`SELECT SUM(sc."surviving_count")::int AS surviving
+  // Use the `survival_check_submissions` table (which already carries
+  // surviving_count + total_count + survival_rate). Take the latest check
+  // per plot_id within the year and average the rates.
+  const result = await prisma.$queryRaw<
+    Array<{ avg_rate: number | null }>
+  >`SELECT AVG(survival_rate)::float AS avg_rate
     FROM (
-      SELECT DISTINCT ON (distribution_id) distribution_id, surviving_count, check_date
-      FROM survival_checks
-      ORDER BY distribution_id, check_date DESC
-    ) sc
-    JOIN seedling_distributions sd ON sd.id = sc.distribution_id
-    WHERE sd.distribution_date >= ${new Date(`${year}-01-01`)}
-      AND sd.distribution_date < ${new Date(`${year + 1}-01-01`)}`;
-
-  const surviving = Number(latest[0]?.surviving ?? 0);
-  return { actual: (surviving / distributed) * 100 };
+      SELECT DISTINCT ON (plot_id) plot_id, survival_rate
+      FROM survival_check_submissions
+      WHERE check_date >= ${new Date(`${year}-01-01`)}
+        AND check_date <  ${new Date(`${year + 1}-01-01`)}
+        AND survival_rate IS NOT NULL
+      ORDER BY plot_id, check_date DESC
+    ) latest
+  `;
+  return { actual: Number(result[0]?.avg_rate ?? 0) };
 };
 
 const iga_groups_active: DerivationFn = async () => {
@@ -276,15 +264,15 @@ const chilli_farms_fenced: DerivationFn = async (periodKey) => {
 
 const cattle_incidents: DerivationFn = async (periodKey) => {
   const year = parseYear(periodKey);
-  const count = await prisma.cattleIncident.count({
-    where: {
-      date: {
-        gte: new Date(`${year}-01-01`),
-        lt: new Date(`${year + 1}-01-01`),
-      },
-    },
-  });
-  return { actual: count };
+  // cattle_incidents lives in the existing Supabase schema (not in this
+  // Prisma model). Hit it via raw SQL; uses incident_date (not date).
+  const result = await prisma.$queryRaw<Array<{ n: number }>>`
+    SELECT COUNT(*)::int AS n
+    FROM cattle_incidents
+    WHERE incident_date >= ${new Date(`${year}-01-01`)}
+      AND incident_date <  ${new Date(`${year + 1}-01-01`)}
+  `;
+  return { actual: Number(result[0]?.n ?? 0) };
 };
 
 /* ─── registry ─────────────────────────────────────────────────────── */

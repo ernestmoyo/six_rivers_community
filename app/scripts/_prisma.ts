@@ -8,10 +8,13 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 export function createSeedClient(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL;
+  // Prefer Supabase session pooler (IPv4); fall back to DATABASE_URL.
+  const connectionString =
+    process.env.SESSION_POOLER_URI ?? process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error(
-      "DATABASE_URL is not set. Update app/.env to point at your Supabase Postgres.",
+      "Neither SESSION_POOLER_URI nor DATABASE_URL is set. Update app/.env to " +
+        "point at your Supabase Postgres.",
     );
   }
   const adapter = new PrismaPg({ connectionString });

@@ -16,7 +16,7 @@ const ManualSchema = z.object({
   periodKey: z.string().min(1),
   target: z.number().nullable().optional(),
   actual: z.number().nullable().optional(),
-  updatedById: z.number().int().optional(),
+  updatedByOfficerId: z.string().optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -54,13 +54,13 @@ export async function POST(
         target: b.target ?? null,
         actual: b.actual ?? null,
         source: IndicatorSource.manual,
-        updatedById: b.updatedById ?? null,
+        updatedByOfficerId: b.updatedByOfficerId ?? null,
       },
       update: {
         target: b.target ?? undefined,
         actual: b.actual ?? undefined,
         source: IndicatorSource.manual,
-        updatedById: b.updatedById ?? undefined,
+        updatedByOfficerId: b.updatedByOfficerId ?? undefined,
       },
     });
     return NextResponse.json({ row });

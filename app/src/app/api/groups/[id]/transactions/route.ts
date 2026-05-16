@@ -18,7 +18,7 @@ const CreateSchema = z.object({
   amountTSh: z.number().nonnegative(),
   category: z.string().optional(),
   narrative: z.string().optional(),
-  recordedById: z.number().int().optional(),
+  recordedByOfficerId: z.string().optional(),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -49,7 +49,7 @@ export async function POST(
         amountTSh: b.amountTSh,
         category: b.category ?? null,
         narrative: b.narrative ?? null,
-        recordedById: b.recordedById ?? null,
+        recordedByOfficerId: b.recordedByOfficerId ?? null,
       },
     });
     return NextResponse.json({ row });
